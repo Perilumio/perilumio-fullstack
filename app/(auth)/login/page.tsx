@@ -3,9 +3,13 @@ import Link from 'next/link';
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase-browser';
+import PasswordField from '@/components/PasswordField';
 
 type Mode = 'login' | 'register' | 'forgot';
 type Status = 'idle' | 'busy' | 'sent' | 'error';
+
+const MIN_PASSWORD_LENGTH = 8;
+const PASSWORD_HINT = `Mindestens ${MIN_PASSWORD_LENGTH} Zeichen.`;
 
 function LoginInner() {
   const router = useRouter();
@@ -64,9 +68,9 @@ function LoginInner() {
       }
 
       if (mode === 'register') {
-        if (password.length < 8) {
+        if (password.length < MIN_PASSWORD_LENGTH) {
           setStatus('error');
-          setError('Passwort muss mindestens 8 Zeichen lang sein.');
+          setError(`Passwort muss mindestens ${MIN_PASSWORD_LENGTH} Zeichen lang sein.`);
           return;
         }
         if (password !== passwordConfirm) {
@@ -121,6 +125,13 @@ function LoginInner() {
   const busy = status === 'busy';
   const sent = status === 'sent';
 
+  const passwordTooShort =
+    mode === 'register' && password.length > 0 && password.length < MIN_PASSWORD_LENGTH;
+  const passwordsMismatch =
+    mode === 'register' &&
+    passwordConfirm.length > 0 &&
+    password !== passwordConfirm;
+
   return (
     <main className="auth-shell">
       <section className="card stack" style={{ maxWidth: 480, margin: '10vh auto' }}>
@@ -146,29 +157,46 @@ function LoginInner() {
           />
 
           {mode !== 'forgot' && (
-            <input
-              type="password"
-              placeholder="Passwort"
-              required
-              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-              minLength={mode === 'register' ? 8 : undefined}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={busy || sent}
-            />
+            <div className="stack" style={{ gap: 6 }}>
+              <PasswordField
+                value={password}
+                onChange={setPassword}
+                placeholder="Passwort"
+                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                required
+                minLength={mode === 'register' ? MIN_PASSWORD_LENGTH : undefined}
+                disabled={busy || sent}
+                ariaDescribedBy={mode === 'register' ? 'password-hint' : undefined}
+              />
+              {mode === 'register' && (
+                <p id="password-hint" className="password-hint">
+                  {PASSWORD_HINT}
+                </p>
+              )}
+              {passwordTooShort && (
+                <p className="field-error">
+                  Passwort ist zu kurz (mindestens {MIN_PASSWORD_LENGTH} Zeichen).
+                </p>
+              )}
+            </div>
           )}
 
           {mode === 'register' && (
-            <input
-              type="password"
-              placeholder="Passwort bestätigen"
-              required
-              autoComplete="new-password"
-              minLength={8}
-              value={passwordConfirm}
-              onChange={(e) => setPasswordConfirm(e.target.value)}
-              disabled={busy || sent}
-            />
+            <div className="stack" style={{ gap: 6 }}>
+              <PasswordField
+                value={passwordConfirm}
+                onChange={setPasswordConfirm}
+                placeholder="Passwort bestätigen"
+                autoComplete="new-password"
+                required
+                minLength={MIN_PASSWORD_LENGTH}
+                disabled={busy || sent}
+                ariaLabel="Passwort bestätigen"
+              />
+              {passwordsMismatch && (
+                <p className="field-error">Passwörter stimmen nicht überein.</p>
+              )}
+            </div>
           )}
 
           <button
@@ -240,7 +268,7 @@ function translateError(msg: string): string {
   if (lower.includes('email not confirmed')) return 'E-Mail-Adresse wurde noch nicht bestätigt.';
   if (lower.includes('user already registered')) return 'Konto mit dieser E-Mail existiert bereits.';
   if (lower.includes('password should be at least'))
-    return 'Passwort ist zu kurz (mindestens 8 Zeichen).';
+    return `Passwort ist zu kurz (mindestens ${MIN_PASSWORD_LENGTH} Zeichen).`;
   if (lower.includes('rate limit')) return 'Zu viele Versuche. Bitte später erneut probieren.';
   return msg;
 }

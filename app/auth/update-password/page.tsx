@@ -3,8 +3,12 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase-browser';
+import PasswordField from '@/components/PasswordField';
 
 type Status = 'checking' | 'ready' | 'busy' | 'success' | 'error' | 'no-session';
+
+const MIN_PASSWORD_LENGTH = 8;
+const PASSWORD_HINT = `Mindestens ${MIN_PASSWORD_LENGTH} Zeichen.`;
 
 export default function UpdatePasswordPage() {
   const router = useRouter();
@@ -24,9 +28,9 @@ export default function UpdatePasswordPage() {
     e.preventDefault();
     setError(null);
 
-    if (password.length < 8) {
+    if (password.length < MIN_PASSWORD_LENGTH) {
       setStatus('error');
-      setError('Passwort muss mindestens 8 Zeichen lang sein.');
+      setError(`Passwort muss mindestens ${MIN_PASSWORD_LENGTH} Zeichen lang sein.`);
       return;
     }
     if (password !== passwordConfirm) {
@@ -55,6 +59,11 @@ export default function UpdatePasswordPage() {
     }
   }
 
+  const busy = status === 'busy';
+  const passwordTooShort = password.length > 0 && password.length < MIN_PASSWORD_LENGTH;
+  const passwordsMismatch =
+    passwordConfirm.length > 0 && password !== passwordConfirm;
+
   return (
     <main className="auth-shell">
       <section className="card stack" style={{ maxWidth: 480, margin: '10vh auto' }}>
@@ -79,32 +88,47 @@ export default function UpdatePasswordPage() {
           <>
             <p className="muted">Lege ein neues Passwort für dein Konto fest.</p>
             <form className="stack" onSubmit={onSubmit}>
-              <input
-                type="password"
-                placeholder="Neues Passwort"
-                required
-                autoComplete="new-password"
-                minLength={8}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={status === 'busy'}
-              />
-              <input
-                type="password"
-                placeholder="Passwort bestätigen"
-                required
-                autoComplete="new-password"
-                minLength={8}
-                value={passwordConfirm}
-                onChange={(e) => setPasswordConfirm(e.target.value)}
-                disabled={status === 'busy'}
-              />
+              <div className="stack" style={{ gap: 6 }}>
+                <PasswordField
+                  value={password}
+                  onChange={setPassword}
+                  placeholder="Neues Passwort"
+                  autoComplete="new-password"
+                  required
+                  minLength={MIN_PASSWORD_LENGTH}
+                  disabled={busy}
+                  ariaDescribedBy="password-hint"
+                />
+                <p id="password-hint" className="password-hint">
+                  {PASSWORD_HINT}
+                </p>
+                {passwordTooShort && (
+                  <p className="field-error">
+                    Passwort ist zu kurz (mindestens {MIN_PASSWORD_LENGTH} Zeichen).
+                  </p>
+                )}
+              </div>
+              <div className="stack" style={{ gap: 6 }}>
+                <PasswordField
+                  value={passwordConfirm}
+                  onChange={setPasswordConfirm}
+                  placeholder="Passwort bestätigen"
+                  autoComplete="new-password"
+                  required
+                  minLength={MIN_PASSWORD_LENGTH}
+                  disabled={busy}
+                  ariaLabel="Passwort bestätigen"
+                />
+                {passwordsMismatch && (
+                  <p className="field-error">Passwörter stimmen nicht überein.</p>
+                )}
+              </div>
               <button
                 type="submit"
                 className="btn btn-primary"
-                disabled={status === 'busy' || !password || !passwordConfirm}
+                disabled={busy || !password || !passwordConfirm}
               >
-                {status === 'busy' ? 'Speichere…' : 'Passwort speichern'}
+                {busy ? 'Speichere…' : 'Passwort speichern'}
               </button>
             </form>
             {status === 'error' && error && (
