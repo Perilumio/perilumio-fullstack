@@ -1,0 +1,65 @@
+{
+  "node": {
+    "405d17280daa2622951e20e8deb2669bd964bdcbaa": {
+      "workers": {
+        "app/(app)/admin/page": {
+          "moduleId": 65047,
+          "async": false,
+          "exportedName": "importAbuCourseCsv",
+          "filename": "app/actions/import-course.ts"
+        }
+      },
+      "exportedName": "importAbuCourseCsv",
+      "filename": "app/actions/import-course.ts"
+    },
+    "4041ec673fa7a141169ada0a36db95d048c37d8ca4": {
+      "workers": {
+        "app/(app)/admin/page": {
+          "moduleId": 65047,
+          "async": false,
+          "exportedName": "previewAbuCourseCsv",
+          "filename": "app/actions/import-course.ts"
+        }
+      },
+      "exportedName": "previewAbuCourseCsv",
+      "filename": "app/actions/import-course.ts"
+    },
+    "40aa207ac3df456504ddec29fa7112b9dde70d1140": {
+      "workers": {
+        "app/(app)/admin/page": {
+          "moduleId": 65047,
+          "async": false,
+          "exportedName": "bulkDeleteQuestions",
+          "filename": "app/actions/question-admin.ts"
+        }
+      },
+      "exportedName": "bulkDeleteQuestions",
+      "filename": "app/actions/question-admin.ts"
+    },
+    "4062adde33f21c499421435ad4c15877e53088b576": {
+      "workers": {
+        "app/(app)/admin/page": {
+          "moduleId": 65047,
+          "async": false,
+          "exportedName": "deleteQuestion",
+          "filename": "app/actions/question-admin.ts"
+        }
+      },
+      "exportedName": "deleteQuestion",
+      "filename": "app/actions/question-admin.ts"
+    },
+    "40211c2f21ba6957cc2d28208c0835f026cdad7b63": {
+      "workers": {
+        "app/(app)/admin/page": {
+          "moduleId": 65047,
+          "async": false,
+          "exportedName": "updateQuestion",
+          "filename": "app/actions/question-admin.ts"
+        }
+      },
+      "exportedName": "updateQuestion",
+      "filename": "app/actions/question-admin.ts"
+    }
+  },
+  "edge": {}
+}

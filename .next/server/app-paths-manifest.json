@@ -1,0 +1,18 @@
+{
+  "/(app)/admin/page": "app/(app)/admin/page.js",
+  "/(app)/battle/page": "app/(app)/battle/page.js",
+  "/(app)/courses/page": "app/(app)/courses/page.js",
+  "/(app)/dashboard/page": "app/(app)/dashboard/page.js",
+  "/(app)/friends/page": "app/(app)/friends/page.js",
+  "/(app)/leaderboard/page": "app/(app)/leaderboard/page.js",
+  "/(app)/learn/page": "app/(app)/learn/page.js",
+  "/(app)/profile/page": "app/(app)/profile/page.js",
+  "/(auth)/login/page": "app/(auth)/login/page.js",
+  "/_global-error/page": "app/_global-error/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/battle-result/route": "app/api/battle-result/route.js",
+  "/api/import-questions/route": "app/api/import-questions/route.js",
+  "/api/lesson-complete/route": "app/api/lesson-complete/route.js",
+  "/api/stats-summary/route": "app/api/stats-summary/route.js",
+  "/page": "app/page.js"
+}

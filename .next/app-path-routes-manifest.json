@@ -1,0 +1,18 @@
+{
+  "/(app)/admin/page": "/admin",
+  "/(app)/battle/page": "/battle",
+  "/(app)/courses/page": "/courses",
+  "/(app)/dashboard/page": "/dashboard",
+  "/(app)/friends/page": "/friends",
+  "/(app)/leaderboard/page": "/leaderboard",
+  "/(app)/learn/page": "/learn",
+  "/(app)/profile/page": "/profile",
+  "/(auth)/login/page": "/login",
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/api/battle-result/route": "/api/battle-result",
+  "/api/import-questions/route": "/api/import-questions",
+  "/api/lesson-complete/route": "/api/lesson-complete",
+  "/api/stats-summary/route": "/api/stats-summary",
+  "/page": "/"
+}
