@@ -1,28 +1,28 @@
 {
   "node": {
-    "405d17280daa2622951e20e8deb2669bd964bdcbaa": {
+    "40b390f527244eba898d1cfbfe1cc7fd7056b1d87a": {
       "workers": {
         "app/(app)/admin/page": {
           "moduleId": 65047,
           "async": false,
-          "exportedName": "importAbuCourseCsv",
+          "exportedName": "importCourseCsv",
           "filename": "app/actions/import-course.ts"
         }
       },
       "filename": "app/actions/import-course.ts",
-      "exportedName": "importAbuCourseCsv"
+      "exportedName": "importCourseCsv"
     },
-    "4041ec673fa7a141169ada0a36db95d048c37d8ca4": {
+    "40e99ad00642a523de3041347eb7a73cd3fbf806f8": {
       "workers": {
         "app/(app)/admin/page": {
           "moduleId": 65047,
           "async": false,
-          "exportedName": "previewAbuCourseCsv",
+          "exportedName": "previewCourseCsv",
           "filename": "app/actions/import-course.ts"
         }
       },
       "filename": "app/actions/import-course.ts",
-      "exportedName": "previewAbuCourseCsv"
+      "exportedName": "previewCourseCsv"
     },
     "40aa207ac3df456504ddec29fa7112b9dde70d1140": {
       "workers": {
