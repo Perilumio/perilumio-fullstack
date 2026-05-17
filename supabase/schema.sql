@@ -18,7 +18,9 @@ create policy "progress-own-read" on public.lesson_progress for select using (au
 create policy "progress-own-write" on public.lesson_progress for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "attempts-own-read" on public.lesson_attempts for select using (auth.uid() = user_id);
 create policy "attempts-own-write" on public.lesson_attempts for insert with check (auth.uid() = user_id);
-create or replace function public.handle_new_user() returns trigger language plpgsql security definer as $$ begin insert into public.profiles (id, display_name) values (new.id, coalesce(new.raw_user_meta_data->>'display_name', 'Lehrling')); return new; end; $$;
-create or replace trigger on_auth_user_created after insert on auth.users for each row execute procedure public.handle_new_user();
+create or replace function public.handle_new_user() returns trigger language plpgsql security definer set search_path = public as $$ begin insert into public.profiles (id, display_name) values (new.id, coalesce(new.raw_user_meta_data->>'display_name', 'Lehrling')) on conflict (id) do nothing; return new; end; $$;
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created after insert on auth.users for each row execute procedure public.handle_new_user();
+insert into public.profiles (id, display_name) select u.id, coalesce(u.raw_user_meta_data->>'display_name', 'Lehrling') from auth.users u left join public.profiles p on p.id = u.id where p.id is null;
 insert into public.modules (title, description) values ('Arbeitssicherheit', 'Strassenbau MVP Modul') on conflict do nothing;
 with mod as (select id from public.modules where title = 'Arbeitssicherheit' limit 1) insert into public.lessons (module_id, title, position, pass_score) select id, title, position, 70 from mod, ( values ('Einführung in Arbeitssicherheit',1), ('PSA auf der Baustelle',2), ('Baustellenabsicherung',3), ('Verhalten im Gefahrenbereich',4), ('Notfall und Meldung',5) ) as seed(title, position) on conflict do nothing;
