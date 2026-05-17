@@ -1,5 +1,6 @@
 create extension if not exists pgcrypto;
-create table if not exists public.profiles (id uuid primary key references auth.users(id) on delete cascade, display_name text not null default 'Lehrling', role text not null default 'student' check (role in ('student','admin')), xp integer not null default 0, level integer not null default 1, created_at timestamptz not null default now());
+create table if not exists public.profiles (id uuid primary key references auth.users(id) on delete cascade, display_name text not null default 'Lehrling', role text not null default 'student' check (role in ('student','admin')), xp integer not null default 0, level integer not null default 1, battle_points integer not null default 0, created_at timestamptz not null default now());
+alter table public.profiles add column if not exists battle_points integer not null default 0;
 create table if not exists public.modules (id uuid primary key default gen_random_uuid(), title text not null, description text, created_at timestamptz not null default now());
 create table if not exists public.lessons (id uuid primary key default gen_random_uuid(), module_id uuid not null references public.modules(id) on delete cascade, title text not null, position integer not null, pass_score integer not null default 70, created_at timestamptz not null default now());
 create table if not exists public.questions (id uuid primary key default gen_random_uuid(), lesson_id uuid not null references public.lessons(id) on delete cascade, prompt text not null, option_a text not null, option_b text not null, option_c text not null, option_d text not null, correct_option text not null check (correct_option in ('A','B','C','D')), explanation text not null, position integer not null, created_at timestamptz not null default now());
@@ -8,6 +9,8 @@ create table if not exists public.lesson_attempts (id uuid primary key default g
 alter table public.profiles enable row level security; alter table public.modules enable row level security; alter table public.lessons enable row level security; alter table public.questions enable row level security; alter table public.lesson_progress enable row level security; alter table public.lesson_attempts enable row level security;
 create policy "profiles-select-own" on public.profiles for select using (auth.uid() = id);
 create policy "profiles-update-own" on public.profiles for update using (auth.uid() = id);
+drop policy if exists "profiles-leaderboard-read" on public.profiles;
+create policy "profiles-leaderboard-read" on public.profiles for select to authenticated using (true);
 create policy "modules-readable" on public.modules for select using (true);
 create policy "lessons-readable" on public.lessons for select using (true);
 create policy "questions-readable" on public.questions for select using (true);
