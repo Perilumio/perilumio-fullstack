@@ -9,7 +9,7 @@ type TileDef = {
   title: string;
   sub: string;
   testId: string;
-  icon: 'courses' | 'path' | 'battle' | 'leaderboard' | 'profile';
+  icon: 'courses' | 'path' | 'battle' | 'leaderboard' | 'profile' | 'friends';
 };
 
 const TILES: ReadonlyArray<TileDef> = [
@@ -18,6 +18,7 @@ const TILES: ReadonlyArray<TileDef> = [
   { href: '/battle',      title: 'Quizbattle',  sub: 'Im Duell antreten',     testId: 'menu-tile-battle',      icon: 'battle' },
   { href: '/leaderboard', title: 'Rangliste',   sub: 'Bestenliste ansehen',   testId: 'menu-tile-leaderboard', icon: 'leaderboard' },
   { href: '/profile',     title: 'Profil',      sub: 'Fortschritt & Konto',   testId: 'menu-tile-profile',     icon: 'profile' },
+  { href: '/friends',     title: 'Freunde',     sub: 'Lernumfeld & Vergleich', testId: 'menu-tile-friends',    icon: 'friends' },
 ];
 
 function TileIcon({ kind }: { kind: TileDef['icon'] }) {
@@ -33,6 +34,8 @@ function TileIcon({ kind }: { kind: TileDef['icon'] }) {
       return <svg {...common}><path d="M6 21V11"/><path d="M12 21V5"/><path d="M18 21v-7"/><path d="M3 21h18"/></svg>;
     case 'profile':
       return <svg {...common}><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>;
+    case 'friends':
+      return <svg {...common}><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 5.5a3 3 0 0 1 0 6"/><path d="M17.5 14.5A5.5 5.5 0 0 1 22 20"/></svg>;
   }
 }
 
