@@ -30,6 +30,7 @@ type BattleState = {
 type Phase = 'idle' | 'joining' | 'in_match' | 'error';
 
 const POLL_INTERVAL_MS = 2500;
+const POINT_CREDIT_MS = 1400;
 
 export function BattleClient({ courseName, hasQuestions }: { courseName: string; hasQuestions: boolean }) {
   const [phase, setPhase] = useState<Phase>('idle');
@@ -37,14 +38,55 @@ export function BattleClient({ courseName, hasQuestions }: { courseName: string;
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<OptionKey | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Remember the answer outcome for the question we just answered, so the feedback
+  // banner remains visible after the index advances and `last_correct_option` clears.
+  const [answerEcho, setAnswerEcho] = useState<{ questionIndex: number; correct: boolean } | null>(null);
+  // Track score deltas to animate the +1 credit on the player who scored.
+  const [pointCredit, setPointCredit] = useState<{ self: boolean; opponent: boolean }>({ self: false, opponent: false });
+  const prevScoresRef = useRef<{ self: number; opponent: number } | null>(null);
   const pollRef = useRef<number | null>(null);
   const lastQuestionIndexRef = useRef<number>(-1);
+  const selfCreditTimerRef = useRef<number | null>(null);
+  const oppCreditTimerRef = useRef<number | null>(null);
 
   const stopPolling = useCallback(() => {
     if (pollRef.current !== null) {
       window.clearInterval(pollRef.current);
       pollRef.current = null;
     }
+  }, []);
+
+  const applyState = useCallback((next: BattleState) => {
+    setState((prev) => {
+      // Detect new question → clear local selection (echo persists by questionIndex).
+      if (prev && next.current_question_index !== prev.current_question_index) {
+        setSelected(null);
+      }
+      lastQuestionIndexRef.current = next.current_question_index;
+      return next;
+    });
+
+    // Animate +1 when scores increase.
+    const prevScores = prevScoresRef.current;
+    const nextSelf = next.you.score;
+    const nextOpp = next.opponent?.score ?? 0;
+    if (prevScores) {
+      if (nextSelf > prevScores.self) {
+        setPointCredit((p) => ({ ...p, self: true }));
+        if (selfCreditTimerRef.current !== null) window.clearTimeout(selfCreditTimerRef.current);
+        selfCreditTimerRef.current = window.setTimeout(() => {
+          setPointCredit((p) => ({ ...p, self: false }));
+        }, POINT_CREDIT_MS);
+      }
+      if (nextOpp > prevScores.opponent) {
+        setPointCredit((p) => ({ ...p, opponent: true }));
+        if (oppCreditTimerRef.current !== null) window.clearTimeout(oppCreditTimerRef.current);
+        oppCreditTimerRef.current = window.setTimeout(() => {
+          setPointCredit((p) => ({ ...p, opponent: false }));
+        }, POINT_CREDIT_MS);
+      }
+    }
+    prevScoresRef.current = { self: nextSelf, opponent: nextOpp };
   }, []);
 
   const fetchState = useCallback(async (matchId: string) => {
@@ -55,28 +97,32 @@ export function BattleClient({ courseName, hasQuestions }: { courseName: string;
       if (!res.ok) return;
       const data = await res.json();
       if (data?.state) {
-        setState((prev) => {
-          const next: BattleState = data.state;
-          if (prev && next.current_question_index !== prev.current_question_index) {
-            // New question → clear local selection.
-            setSelected(null);
-          }
-          lastQuestionIndexRef.current = next.current_question_index;
-          return next;
-        });
+        applyState(data.state);
         if (data.state.status === 'finished' || data.state.status === 'cancelled') {
           stopPolling();
         }
       }
     } catch {}
-  }, [stopPolling]);
+  }, [applyState, stopPolling]);
 
   const startPolling = useCallback((matchId: string) => {
     stopPolling();
     pollRef.current = window.setInterval(() => { fetchState(matchId); }, POLL_INTERVAL_MS);
   }, [fetchState, stopPolling]);
 
-  useEffect(() => () => stopPolling(), [stopPolling]);
+  useEffect(() => () => {
+    stopPolling();
+    if (selfCreditTimerRef.current !== null) window.clearTimeout(selfCreditTimerRef.current);
+    if (oppCreditTimerRef.current !== null) window.clearTimeout(oppCreditTimerRef.current);
+  }, [stopPolling]);
+
+  const resetMatchLocal = useCallback(() => {
+    setState(null);
+    setSelected(null);
+    setAnswerEcho(null);
+    setPointCredit({ self: false, opponent: false });
+    prevScoresRef.current = null;
+  }, []);
 
   const join = useCallback(async () => {
     setPhase('joining');
@@ -89,6 +135,7 @@ export function BattleClient({ courseName, hasQuestions }: { courseName: string;
         setPhase('error');
         return;
       }
+      prevScoresRef.current = { self: data.state.you.score, opponent: data.state.opponent?.score ?? 0 };
       setState(data.state);
       lastQuestionIndexRef.current = data.state.current_question_index;
       setPhase('in_match');
@@ -114,11 +161,21 @@ export function BattleClient({ courseName, hasQuestions }: { courseName: string;
         }),
       });
       const data = await res.json();
-      if (data?.state) setState(data.state);
+      if (data?.state) {
+        const next: BattleState = data.state;
+        // Determine correctness from server's last_correct_option (set once we've answered).
+        if (next.last_correct_option) {
+          setAnswerEcho({
+            questionIndex: state.current_question_index,
+            correct: next.last_correct_option === option,
+          });
+        }
+        applyState(next);
+      }
     } finally {
       setSubmitting(false);
     }
-  }, [state, submitting]);
+  }, [state, submitting, applyState]);
 
   const cancelOrLeave = useCallback(async () => {
     if (!state) {
@@ -133,18 +190,16 @@ export function BattleClient({ courseName, hasQuestions }: { courseName: string;
         body: JSON.stringify({ match_id: state.match_id }),
       });
     } catch {}
-    setState(null);
-    setSelected(null);
+    resetMatchLocal();
     setPhase('idle');
-  }, [state, stopPolling]);
+  }, [state, stopPolling, resetMatchLocal]);
 
   const playAgain = useCallback(() => {
     stopPolling();
-    setState(null);
-    setSelected(null);
+    resetMatchLocal();
     setError(null);
     setPhase('idle');
-  }, [stopPolling]);
+  }, [stopPolling, resetMatchLocal]);
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -224,15 +279,26 @@ export function BattleClient({ courseName, hasQuestions }: { courseName: string;
   const youAnswered = state.you.answered_current;
   const opponentAnswered = state.opponent?.answered_current ?? false;
 
+  // Show the answer echo only for the question we actually answered.
+  const echoForThisQuestion = answerEcho && answerEcho.questionIndex === state.current_question_index
+    ? answerEcho
+    : null;
+  // Fallback: if the server still reports answered_current=true and we know `correct`
+  // and `selected`, derive correctness (covers refresh / late polling).
+  const liveCorrect = echoForThisQuestion?.correct
+    ?? (youAnswered && correct !== null && selected !== null ? correct === selected : null);
+
   return (
     <div className="card stack">
-      <div className="scorebox">
+      <div className="scorebox" data-testid="battle-scoreboard">
         <PlayerCard
           label="Du"
           player={state.self_profile}
           score={state.you.score}
           testId="battle-self"
           scoreTestId="battle-score-self"
+          creditTestId="battle-point-credit-self"
+          showCredit={pointCredit.self}
         />
         <div style={{ fontSize: 22 }}>⚔️</div>
         {state.opponent ? (
@@ -242,6 +308,8 @@ export function BattleClient({ courseName, hasQuestions }: { courseName: string;
             score={state.opponent.score}
             testId="battle-opponent"
             scoreTestId="battle-score-enemy"
+            creditTestId="battle-point-credit-opponent"
+            showCredit={pointCredit.opponent}
           />
         ) : (
           <div className="muted">—</div>
@@ -256,14 +324,11 @@ export function BattleClient({ courseName, hasQuestions }: { courseName: string;
           <h2 data-testid="battle-current-question">{q.prompt}</h2>
           <div className="stack" data-testid="battle-answer-buttons">
             {q.options.map((option) => {
-              const isPicked = selected === option.key || (youAnswered && selected === null && false);
               const showResult = youAnswered && correct !== null;
               let cls = 'option';
               if (showResult) {
                 if (option.key === correct) cls = 'option correct';
                 else if (option.key === selected) cls = 'option wrong';
-              } else if (isPicked) {
-                cls = 'option';
               }
               return (
                 <button
@@ -281,11 +346,38 @@ export function BattleClient({ courseName, hasQuestions }: { courseName: string;
           </div>
 
           {youAnswered ? (
-            <div className="card" data-testid="battle-waiting-opponent">
-              {opponentAnswered
-                ? 'Beide Spieler haben geantwortet. Nächste Frage gleich…'
-                : 'Du hast geantwortet. Warte auf Gegner…'}
-            </div>
+            <>
+              {liveCorrect !== null ? (
+                <div
+                  className={`battle-feedback ${liveCorrect ? 'is-correct' : 'is-wrong'}`}
+                  data-testid="battle-answer-feedback"
+                  data-correct={liveCorrect ? 'true' : 'false'}
+                >
+                  {liveCorrect ? (
+                    <>
+                      <span aria-hidden="true">✅</span>
+                      <strong>Richtig</strong>
+                      <span className="battle-feedback-points">+1 Punkt</span>
+                    </>
+                  ) : (
+                    <>
+                      <span aria-hidden="true">❌</span>
+                      <strong>Leider falsch</strong>
+                    </>
+                  )}
+                </div>
+              ) : null}
+              {!opponentAnswered ? (
+                <div className="battle-waiting" data-testid="battle-waiting-opponent">
+                  <span className="battle-hourglass" aria-hidden="true">⏳</span>
+                  <span>Warten auf Gegner…</span>
+                </div>
+              ) : (
+                <div className="muted" data-testid="battle-next-soon">
+                  Beide Spieler haben geantwortet. Nächste Frage gleich…
+                </div>
+              )}
+            </>
           ) : (
             <div className="muted">
               {opponentAnswered ? 'Gegner hat bereits geantwortet. Du bist dran!' : 'Wähle eine Antwort.'}
@@ -327,12 +419,16 @@ function PlayerCard({
   score,
   testId,
   scoreTestId,
+  creditTestId,
+  showCredit,
 }: {
   label: string;
   player: PlayerPublic;
   score?: number;
   testId?: string;
   scoreTestId?: string;
+  creditTestId?: string;
+  showCredit?: boolean;
 }) {
   return (
     <div data-testid={testId} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
@@ -342,7 +438,12 @@ function PlayerCard({
         {player.username}
       </div>
       {typeof score === 'number' ? (
-        <div className="kpi" data-testid={scoreTestId}>{score}</div>
+        <div className="battle-score-wrap">
+          <div className="kpi" data-testid={scoreTestId}>{score}</div>
+          {showCredit ? (
+            <div className="battle-point-credit" data-testid={creditTestId} aria-live="polite">+1</div>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );
