@@ -34,7 +34,7 @@ export function BattleClient({ questions, courseName }: { questions: BattleQuest
       body: JSON.stringify({ score, enemyScore: enemy }),
     });
     const result = await response.json();
-    setMessage(result.message ? `${result.message} ${result.reward ? `+${result.reward} XP` : ''}` : '');
+    setMessage(result.message ? `${result.message} ${result.bpReward ? `+${result.bpReward} BP` : ''}` : '');
   }
 
   return (
