@@ -21,5 +21,7 @@
 .home-tile-title{font-weight:800;font-size:15px;letter-spacing:.2px;color:#eaf5ff}
 .home-tile-sub{font-size:11px}
 .course-card[data-active="true"]{border-color:rgba(55,184,255,.7);box-shadow:0 0 0 1px rgba(80,130,255,.32),0 0 28px rgba(55,184,255,.35),0 14px 30px rgba(0,0,0,.45)}
-@media (max-width:900px){.home-menu{max-width:none}}
-@media (max-width:360px){.home-menu{grid-template-columns:1fr}}
+@media (max-width:900px){.home-menu{max-width:none;gap:10px}}
+@media (max-width:480px){.home-menu{grid-template-columns:repeat(2,1fr);gap:10px}.home-tile{padding:12px;min-height:88px;border-radius:16px}.home-tile-icon{width:32px;height:32px;border-radius:10px}.home-tile-icon svg{width:20px;height:20px}.home-tile-title{font-size:14px}.home-tile-sub{font-size:11px}}
+@media (max-width:380px){.home-menu{gap:8px}.home-tile{padding:10px;min-height:82px}.home-tile-title{font-size:13px}.home-tile-sub{font-size:10px}}
+@media (max-width:320px){.home-menu{grid-template-columns:1fr}}
