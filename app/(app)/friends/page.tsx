@@ -45,30 +45,33 @@ export default async function FriendsPage() {
   }
 
   const friendIds = (edges ?? []).map((e) => e.friend_id as string);
-  let friends: ProfileRow[] = [];
-  if (friendIds.length > 0) {
-    const { data: profiles, error: profilesError } = await supabase
-      .from('profiles')
-      .select('id, display_name, username, avatar_key, xp, battle_points')
-      .in('id', friendIds);
-    if (profilesError) {
-      return (
-        <AppShell>
-          <section className="card stack" data-testid="friends-error">
-            <h1>Freunde</h1>
-            <p className="muted">Freunde konnten nicht geladen werden: {profilesError.message}</p>
-          </section>
-        </AppShell>
-      );
-    }
-    friends = (profiles ?? []) as ProfileRow[];
-    friends.sort(
-      (a, b) =>
-        (b.xp ?? 0) - (a.xp ?? 0) ||
-        (b.battle_points ?? 0) - (a.battle_points ?? 0) ||
-        (a.username || a.display_name || '').localeCompare(b.username || b.display_name || ''),
+  const idsToLoad = [user.id, ...friendIds];
+  const { data: profiles, error: profilesError } = await supabase
+    .from('profiles')
+    .select('id, display_name, username, avatar_key, xp, battle_points')
+    .in('id', idsToLoad);
+
+  if (profilesError) {
+    return (
+      <AppShell>
+        <section className="card stack" data-testid="friends-error">
+          <h1>Freunde</h1>
+          <p className="muted">Freunde konnten nicht geladen werden: {profilesError.message}</p>
+        </section>
+      </AppShell>
     );
   }
+
+  const all = (profiles ?? []) as ProfileRow[];
+  const self = all.find((p) => p.id === user.id) ?? {
+    id: user.id,
+    display_name: null,
+    username: null,
+    avatar_key: null,
+    xp: 0,
+    battle_points: 0,
+  };
+  const friends = all.filter((p) => p.id !== user.id);
 
   return (
     <AppShell>
@@ -81,7 +84,7 @@ export default async function FriendsPage() {
           </div>
           <Lumio />
         </div>
-        <FriendsClient friends={friends} />
+        <FriendsClient friends={friends} self={self} />
       </section>
     </AppShell>
   );

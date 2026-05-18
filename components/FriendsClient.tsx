@@ -17,6 +17,7 @@ type SearchRow = ProfileRow & { is_friend: boolean };
 
 type Props = {
   friends: ProfileRow[];
+  self: ProfileRow;
 };
 
 function formatScore(n: number | null | undefined) {
@@ -27,7 +28,7 @@ function nameOf(row: ProfileRow) {
   return row.username || row.display_name || 'Lehrling';
 }
 
-export default function FriendsClient({ friends }: Props) {
+export default function FriendsClient({ friends, self }: Props) {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchRow[] | null>(null);
@@ -124,6 +125,60 @@ export default function FriendsClient({ friends }: Props) {
   const showResults = query.trim().length >= 2;
   const noResults = showResults && !searching && results !== null && results.length === 0 && !searchError;
 
+  const everyone: ProfileRow[] = [self, ...friends];
+  const xpRanking = [...everyone].sort(
+    (a, b) =>
+      (b.xp ?? 0) - (a.xp ?? 0) ||
+      (b.battle_points ?? 0) - (a.battle_points ?? 0) ||
+      nameOf(a).localeCompare(nameOf(b)),
+  );
+  const bpRanking = [...everyone].sort(
+    (a, b) =>
+      (b.battle_points ?? 0) - (a.battle_points ?? 0) ||
+      (b.xp ?? 0) - (a.xp ?? 0) ||
+      nameOf(a).localeCompare(nameOf(b)),
+  );
+
+  const renderRow = (
+    row: ProfileRow,
+    index: number,
+    kind: 'xp' | 'bp',
+  ) => {
+    const isMe = row.id === self.id;
+    const pending = pendingIds.has(row.id);
+    const score = kind === 'xp' ? row.xp : row.battle_points;
+    const label = kind === 'xp' ? 'XP' : 'BP';
+    const rowTestId = isMe ? 'friends-ranking-row-self' : `friends-${kind}-ranking-row`;
+    return (
+      <div className="card lb-row" key={row.id} data-testid={rowTestId}>
+        <span className="lb-rank">#{index + 1}</span>
+        <Avatar avatarKey={row.avatar_key} size="sm" testId={`friends-${kind}-ranking-avatar`} />
+        <div className="lb-meta" style={{ flex: 1, minWidth: 0 }}>
+          <strong>
+            {nameOf(row)}
+            {isMe && ' (Du)'}
+          </strong>
+          <span className="muted" style={{ fontSize: 12 }}>
+            {label} {formatScore(score)}
+          </span>
+        </div>
+        {!isMe && (
+          <button
+            type="button"
+            className="btn"
+            onClick={() => removeFriend(row.id)}
+            disabled={pending || isPending}
+            data-testid="friends-remove-button"
+          >
+            {pending ? '…' : 'Entfernen'}
+          </button>
+        )}
+      </div>
+    );
+  };
+
+  const hasFriends = friends.length > 0;
+
   return (
     <section className="stack">
       <div className="card stack">
@@ -193,46 +248,42 @@ export default function FriendsClient({ friends }: Props) {
         )}
       </div>
 
-      <div className="card stack" data-testid="friends-ranking">
-        <div className="hero">
-          <div>
-            <span className="pill">Freunde-Rangliste</span>
-            <h1 style={{ margin: '8px 0 6px', fontSize: 22 }}>Deine Freunde</h1>
-            <p className="muted" style={{ margin: 0 }}>
-              Sortiert nach XP, dann nach Battlepunkten.
-            </p>
+      <div className="grid grid-2">
+        <div className="card stack" data-testid="friends-xp-ranking">
+          <div className="hero">
+            <div>
+              <span className="pill">Freunde · XP</span>
+              <h2 style={{ margin: '8px 0 6px', fontSize: 20 }}>XP-Rangliste</h2>
+              <p className="muted" style={{ margin: 0, fontSize: 13 }}>
+                Du und deine Freunde, sortiert nach XP.
+              </p>
+            </div>
           </div>
+          {!hasFriends && (
+            <p className="muted" data-testid="friends-ranking-empty">
+              Noch keine Freunde. Suche oben nach Nutzern, um sie hinzuzufügen.
+            </p>
+          )}
+          {xpRanking.map((row, index) => renderRow(row, index, 'xp'))}
         </div>
-        {friends.length === 0 ? (
-          <p className="muted" data-testid="friends-ranking-empty">
-            Noch keine Freunde. Suche oben nach Nutzern, um sie hinzuzufügen.
-          </p>
-        ) : (
-          friends.map((row, index) => {
-            const pending = pendingIds.has(row.id);
-            return (
-              <div className="card lb-row" key={row.id} data-testid="friends-ranking-row">
-                <span className="lb-rank">#{index + 1}</span>
-                <Avatar avatarKey={row.avatar_key} size="sm" testId="friends-ranking-avatar" />
-                <div className="lb-meta" style={{ flex: 1, minWidth: 0 }}>
-                  <strong>{nameOf(row)}</strong>
-                  <span className="muted" style={{ fontSize: 12 }}>
-                    XP {formatScore(row.xp)} · BP {formatScore(row.battle_points)}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={() => removeFriend(row.id)}
-                  disabled={pending || isPending}
-                  data-testid="friends-remove-button"
-                >
-                  {pending ? '…' : 'Entfernen'}
-                </button>
-              </div>
-            );
-          })
-        )}
+
+        <div className="card stack" data-testid="friends-bp-ranking">
+          <div className="hero">
+            <div>
+              <span className="pill">Freunde · BP</span>
+              <h2 style={{ margin: '8px 0 6px', fontSize: 20 }}>Battlepunkte-Rangliste</h2>
+              <p className="muted" style={{ margin: 0, fontSize: 13 }}>
+                Du und deine Freunde, sortiert nach Battlepunkten.
+              </p>
+            </div>
+          </div>
+          {!hasFriends && (
+            <p className="muted" data-testid="friends-ranking-empty">
+              Noch keine Freunde. Suche oben nach Nutzern, um sie hinzuzufügen.
+            </p>
+          )}
+          {bpRanking.map((row, index) => renderRow(row, index, 'bp'))}
+        </div>
       </div>
     </section>
   );
