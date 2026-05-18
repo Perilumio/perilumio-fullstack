@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase-browser';
@@ -135,6 +136,16 @@ function LoginInner() {
   return (
     <main className="auth-shell">
       <section className="card stack" style={{ maxWidth: 480, margin: '10vh auto' }}>
+        <div className="brand-logo-login" data-testid="brand-logo-login">
+          <Image
+            src="/brand/perilumio-wordmark.jpg"
+            alt="Perilumio"
+            width={1305}
+            height={262}
+            priority
+            sizes="(max-width: 480px) 240px, 320px"
+          />
+        </div>
         <span className="pill">
           {mode === 'login' ? 'Login' : mode === 'register' ? 'Registrierung' : 'Passwort zurücksetzen'}
         </span>
