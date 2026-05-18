@@ -4,7 +4,7 @@ import { Avatar } from '@/components/Avatar';
 import { ProfileEditor } from '@/components/ProfileEditor';
 import { createClient } from '@/lib/supabase/server';
 import { DEFAULT_AVATAR_KEY, avatarLabel } from '@/lib/avatars';
-import { COURSES, courseLabel, type CourseKey } from '@/lib/courses';
+import { COURSES, courseLabel, isValidCourseKey, DEFAULT_COURSE_KEY, type CourseKey } from '@/lib/courses';
 
 export const dynamic = 'force-dynamic';
 
@@ -67,7 +67,7 @@ export default async function ProfilePage() {
 
   const moduleCourse = new Map<string, CourseKey>();
   for (const m of (modules ?? []) as any[]) {
-    if (m?.id && (m.course_key === 'abu' || m.course_key === 'strassenbau')) {
+    if (m?.id && isValidCourseKey(m.course_key)) {
       moduleCourse.set(m.id as string, m.course_key as CourseKey);
     }
   }
@@ -77,10 +77,13 @@ export default async function ProfilePage() {
     if (l?.id && ck) lessonCourse.set(l.id as string, ck);
   }
 
-  const totals: Record<CourseKey, number> = { abu: 0, strassenbau: 0 };
+  const emptyByCourse = (): Record<CourseKey, number> =>
+    Object.fromEntries(COURSES.map((c) => [c.key, 0])) as Record<CourseKey, number>;
+
+  const totals: Record<CourseKey, number> = emptyByCourse();
   for (const ck of lessonCourse.values()) totals[ck] += 1;
 
-  const passedByCourse: Record<CourseKey, number> = { abu: 0, strassenbau: 0 };
+  const passedByCourse: Record<CourseKey, number> = emptyByCourse();
   const passedLessonIds = new Set<string>();
   for (const row of (progress ?? []) as any[]) {
     if (!row?.passed) continue;
@@ -96,15 +99,17 @@ export default async function ProfilePage() {
     return { key: c.key, total, passed, percent };
   });
 
-  const totalLessons = totals.abu + totals.strassenbau;
-  const totalPassed = passedByCourse.abu + passedByCourse.strassenbau;
+  const totalLessons = COURSES.reduce((sum, c) => sum + totals[c.key], 0);
+  const totalPassed = COURSES.reduce((sum, c) => sum + passedByCourse[c.key], 0);
   const overallPercent = totalLessons > 0 ? Math.round((totalPassed / totalLessons) * 100) : 0;
 
   const username = profile?.username ?? deriveUsername(user);
   const avatarKey = profile?.avatar_key ?? DEFAULT_AVATAR_KEY;
   const xp = profile?.xp ?? 0;
   const battlePoints = profile?.battle_points ?? 0;
-  const activeCourse = (profile?.active_course_key ?? 'strassenbau') as CourseKey;
+  const activeCourse: CourseKey = isValidCourseKey(profile?.active_course_key)
+    ? (profile!.active_course_key as CourseKey)
+    : DEFAULT_COURSE_KEY;
 
   return (
     <AppShell>

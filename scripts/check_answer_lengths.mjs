@@ -7,7 +7,7 @@
 //
 // Verwendung:
 //   node scripts/check_answer_lengths.mjs <csv-pfad> [--verbose]
-//   node scripts/check_answer_lengths.mjs --all          # ABU + Strassenbau
+//   node scripts/check_answer_lengths.mjs --all          # alle Seed-Kataloge
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -161,6 +161,8 @@ if (args.includes('--all') || args.length === 0) {
   csvPaths = [
     'supabase/seeds/abu_fragenkatalog_30_pro_lektion.csv',
     'supabase/seeds/strassenbau_fragenkatalog_30_pro_lektion.csv',
+    'supabase/seeds/automechaniker_fragenkatalog_bildungsplan.csv',
+    'supabase/seeds/schreiner_fragenkatalog_bildungsplan.csv',
   ];
 } else {
   csvPaths = args.filter(a => !a.startsWith('--'));

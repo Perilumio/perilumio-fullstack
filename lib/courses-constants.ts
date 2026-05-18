@@ -1,4 +1,4 @@
-export type CourseKey = 'strassenbau' | 'abu';
+export type CourseKey = 'strassenbau' | 'abu' | 'automechaniker' | 'schreiner';
 
 type Course = { key: CourseKey; label: string; description: string };
 
@@ -6,8 +6,10 @@ type Course = { key: CourseKey; label: string; description: string };
 // sortiert ABU immer an erste Stelle und alle weiteren Kurse alphabetisch
 // nach Label, damit künftige Kurse automatisch korrekt einsortiert werden.
 const COURSE_DEFINITIONS: ReadonlyArray<Course> = [
-  { key: 'strassenbau', label: 'Strassenbau', description: 'Berufsspezifischer Kurs · Arbeitssicherheit' },
-  { key: 'abu',         label: 'ABU',         description: 'Allgemeinbildung · QV-naher Kurs' },
+  { key: 'strassenbau',    label: 'Strassenbau',    description: 'Berufsspezifischer Kurs · Arbeitssicherheit' },
+  { key: 'abu',            label: 'ABU',            description: 'Allgemeinbildung · QV-naher Kurs' },
+  { key: 'automechaniker', label: 'Automechaniker', description: 'Berufsspezifischer Kurs · Bildungsplan EFZ' },
+  { key: 'schreiner',      label: 'Schreiner',      description: 'Berufsspezifischer Kurs · Bildungsplan EFZ' },
 ];
 
 export function sortCourses<T extends { key: CourseKey; label: string }>(courses: ReadonlyArray<T>): T[] {
