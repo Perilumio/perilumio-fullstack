@@ -1,7 +1,41 @@
 import { createClient } from '@/lib/supabase/server';
-import type { CourseKey } from '@/lib/courses';
+import { DEFAULT_COURSE_KEY, isValidCourseKey, type CourseKey } from '@/lib/courses-constants';
 
-export async function getDashboardData(){ const supabase = await createClient(); const { data: { user } } = await supabase.auth.getUser(); const { data: profile } = user ? await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle() : { data: null }; const { data: modules } = await supabase.from('modules').select('id,title,description'); const { data: lessons } = await supabase.from('lessons').select('*').order('position'); const { data: progress } = await supabase.from('lesson_progress').select('*'); const { data: attempts } = await supabase.from('lesson_attempts').select('*'); return { profile, modules: modules ?? [], lessons: lessons ?? [], progress: progress ?? [], attempts: attempts ?? [] }; }
+export async function getDashboardData(){
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: profile } = user
+    ? await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle()
+    : { data: null };
+  const activeCourseKey: CourseKey = isValidCourseKey((profile as any)?.active_course_key)
+    ? ((profile as any).active_course_key as CourseKey)
+    : DEFAULT_COURSE_KEY;
+  const { data: courseModules } = await supabase
+    .from('modules')
+    .select('id,title,description')
+    .eq('course_key', activeCourseKey);
+  const moduleList = (courseModules ?? []) as { id: string }[];
+  const moduleIds = moduleList.map((m) => m.id);
+  const lessons = moduleIds.length
+    ? (await supabase.from('lessons').select('*').in('module_id', moduleIds).order('position')).data ?? []
+    : [];
+  const lessonIds = (lessons as { id: string }[]).map((l) => l.id);
+  const progress = user && lessonIds.length
+    ? (await supabase
+        .from('lesson_progress')
+        .select('*')
+        .eq('user_id', user.id)
+        .in('lesson_id', lessonIds)).data ?? []
+    : [];
+  const attempts = user && lessonIds.length
+    ? (await supabase
+        .from('lesson_attempts')
+        .select('*')
+        .eq('user_id', user.id)
+        .in('lesson_id', lessonIds)).data ?? []
+    : [];
+  return { profile, modules: moduleList, lessons, progress, attempts, activeCourseKey };
+}
 export async function getLessonBundle(){ const supabase = await createClient(); const { data: lessons } = await supabase.from('lessons').select('*').order('position'); const { data: questions } = await supabase.from('questions').select('*').order('position'); const { data: progress } = await supabase.from('lesson_progress').select('*'); return { lessons: lessons ?? [], questions: questions ?? [], progress: progress ?? [] }; }
 export async function getStatsSummary(){ const supabase = await createClient(); const [{ count: users }, { count: progressCount }, { count: attemptsCount }] = await Promise.all([supabase.from('profiles').select('*', { count:'exact', head:true }), supabase.from('lesson_progress').select('*', { count:'exact', head:true }), supabase.from('lesson_attempts').select('*', { count:'exact', head:true })]); return { users: users ?? 0, progressCount: progressCount ?? 0, attemptsCount: attemptsCount ?? 0 }; }
 export async function getCourseBundle(moduleId: string){ const supabase = await createClient(); const { data: module } = await supabase.from('modules').select('*').eq('id', moduleId).maybeSingle(); const { data: lessons } = await supabase.from('lessons').select('*').eq('module_id', moduleId).order('position'); const lessonIds = (lessons ?? []).map((l: any) => l.id); const qr = lessonIds.length ? await supabase.from('questions').select('*').in('lesson_id', lessonIds).order('position') : { data: [] as any }; return { module, lessons: lessons ?? [], questions: qr.data ?? [] }; }

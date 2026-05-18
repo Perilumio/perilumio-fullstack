@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
 import { Avatar } from '@/components/Avatar';
 import { getDashboardData } from '@/lib/data';
-import { getActiveCourseKey, courseLabel } from '@/lib/courses';
+import { courseLabel } from '@/lib/courses';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -43,11 +43,11 @@ function TileIcon({ kind }: { kind: TileDef['icon'] }) {
 }
 
 export default async function DashboardPage() {
-  const { profile, lessons, progress } = await getDashboardData();
+  const { profile, lessons, progress, activeCourseKey } = await getDashboardData();
   const completed = progress.filter((item: any) => item.passed).length;
   const percent = lessons.length ? Math.round((completed / lessons.length) * 100) : 0;
   const greetingName = profile?.username ?? profile?.display_name ?? 'Lehrling';
-  const activeCourse = await getActiveCourseKey();
+  const activeCourse = activeCourseKey;
 
   return (
     <AppShell showHomeButton={false}>

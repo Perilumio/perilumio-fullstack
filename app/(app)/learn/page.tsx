@@ -45,7 +45,7 @@ export default async function LearnPage({ searchParams }: { searchParams?: Promi
             <Link className="btn btn-primary" href="/courses" data-testid="learn-empty-courses-link">Zur Kursauswahl</Link>
           </div>
         ) : (
-          <LearnClient lessons={lessons as any} questions={questions as any} progress={progress} courseName={courseLabel(courseKey)} />
+          <LearnClient lessons={lessons as any} questions={questions as any} progress={progress} courseName={courseLabel(courseKey)} userId={auth.user?.id ?? null} />
         )}
       </section>
     </AppShell>
