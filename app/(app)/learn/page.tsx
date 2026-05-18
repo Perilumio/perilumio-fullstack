@@ -3,6 +3,7 @@ import { AppShell } from '@/components/AppShell';
 import { LearnClient } from '@/components/LearnClient';
 import { getActiveCourseKey, courseLabel, isValidCourseKey, type CourseKey } from '@/lib/courses';
 import { getCourseLessons } from '@/lib/data';
+import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,6 +12,19 @@ export default async function LearnPage({ searchParams }: { searchParams?: Promi
   const override = isValidCourseKey(params?.course) ? (params!.course as CourseKey) : null;
   const courseKey: CourseKey = override ?? (await getActiveCourseKey());
   const { lessons, questions } = await getCourseLessons(courseKey);
+
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getUser();
+  const lessonIds = (lessons as { id: string }[]).map((l) => l.id);
+  let progress: { lesson_id: string; best_score: number; passed: boolean; last_question_index: number }[] = [];
+  if (auth.user && lessonIds.length > 0) {
+    const { data } = await supabase
+      .from('lesson_progress')
+      .select('lesson_id, best_score, passed, last_question_index')
+      .eq('user_id', auth.user.id)
+      .in('lesson_id', lessonIds);
+    progress = data ?? [];
+  }
 
   return (
     <AppShell>
@@ -31,7 +45,7 @@ export default async function LearnPage({ searchParams }: { searchParams?: Promi
             <Link className="btn btn-primary" href="/courses" data-testid="learn-empty-courses-link">Zur Kursauswahl</Link>
           </div>
         ) : (
-          <LearnClient lessons={lessons as any} questions={questions as any} courseName={courseLabel(courseKey)} />
+          <LearnClient lessons={lessons as any} questions={questions as any} progress={progress} courseName={courseLabel(courseKey)} />
         )}
       </section>
     </AppShell>
