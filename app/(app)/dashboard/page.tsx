@@ -55,7 +55,7 @@ export default async function DashboardPage() {
               <strong data-testid="dashboard-active-course">{courseLabel(activeCourse)}</strong>
             </p>
           </div>
-          <Avatar avatarKey={profile?.avatar_key} size="md" testId="dashboard-avatar" />
+          <Avatar avatarKey={profile?.avatar_key} size="lg" testId="dashboard-avatar" />
         </div>
         <div className="grid grid-4">
           <div className="card"><div className="muted">XP</div><div className="kpi">{profile?.xp ?? 0}</div></div>
