@@ -36,5 +36,7 @@ export async function saveProfile(_prev: SaveProfileResult | null, formData: For
   revalidatePath('/profile');
   revalidatePath('/leaderboard');
   revalidatePath('/dashboard');
+  revalidatePath('/friends');
+  revalidatePath('/', 'layout');
   return { ok: true, message: 'Profil gespeichert.' };
 }
