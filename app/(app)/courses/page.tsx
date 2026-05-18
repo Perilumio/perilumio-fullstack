@@ -1,4 +1,27 @@
-import Link from 'next/link';
 import { AppShell, Lumio } from '@/components/AppShell';
-import { abuCourse } from '@/lib/abu-course';
-export default function CoursesPage(){ return <AppShell><section className="stack"><div className="card hero"><div><span className="pill">Kurse</span><h1>Perilumio Lernbereiche</h1><p className="muted">ABU ist jetzt als echter QV-naher Kurs integriert.</p></div><Lumio /></div><div className="grid grid-2"><div className="card stack"><span className="pill">Allgemeinbildung</span><h2>{abuCourse.course.title}</h2><p className="muted">{abuCourse.course.description}</p><div><strong>{abuCourse.lessons.length}</strong> Lektionen · <strong>{abuCourse.questions.length}</strong> Fragen</div><Link className="btn btn-primary" href="/learn?course=abu">ABU starten</Link></div><div className="card stack"><span className="pill">Strassenbau</span><h2>Arbeitssicherheit</h2><p className="muted">Berufsspezifischer Kurs für den MVP.</p><Link className="btn" href="/learn?course=roadwork">Kurs öffnen</Link></div></div></section></AppShell>; }
+import { CoursePicker } from '@/components/CoursePicker';
+import { getActiveCourseKey, courseLabel } from '@/lib/courses';
+
+export const dynamic = 'force-dynamic';
+
+export default async function CoursesPage() {
+  const active = await getActiveCourseKey();
+  return (
+    <AppShell>
+      <section className="stack">
+        <div className="card hero">
+          <div>
+            <span className="pill">Kurse</span>
+            <h1>Wähle deinen Kurs</h1>
+            <p className="muted">
+              Aktiver Kurs:{' '}
+              <strong data-testid="active-course-display">{courseLabel(active)}</strong>
+            </p>
+          </div>
+          <Lumio />
+        </div>
+        <CoursePicker activeCourseKey={active} />
+      </section>
+    </AppShell>
+  );
+}
