@@ -21,6 +21,8 @@ type Progress = {
   last_question_index: number;
 };
 
+type View = 'overview' | 'question';
+
 function pickInitialLessonIndex(lessons: Lesson[], progress: Progress[]): number {
   if (lessons.length === 0) return 0;
   const byId = new Map(progress.map((p) => [p.lesson_id, p]));
@@ -53,6 +55,7 @@ export function LearnClient({
     [lessons, progress],
   );
 
+  const [view, setView] = useState<View>('overview');
   const [lessonIndex, setLessonIndex] = useState(initialLessonIndex);
   const [questionIndex, setQuestionIndex] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
@@ -171,12 +174,13 @@ export function LearnClient({
     );
     if (passed) {
       setCompletedLessons((prev) => {
-        const next = new Set(prev);
-        next.add(lesson.id);
-        return next;
+        const nextSet = new Set(prev);
+        nextSet.add(lesson.id);
+        return nextSet;
       });
     }
     resetLessonState();
+    setView('overview');
   }
 
   function restartLesson() {
@@ -198,61 +202,131 @@ export function LearnClient({
 
   const lessonCompleted = lesson ? completedLessons.has(lesson.id) : false;
 
-  return (
-    <div className="grid grid-2">
-      <div className="card stack">
+  const totalLessons = lessons.length;
+  const doneCount = lessons.filter((l) => completedLessons.has(l.id) || progressMap.get(l.id)?.passed).length;
+
+  function startOrResume() {
+    setMessage('');
+    setView('question');
+  }
+
+  function openLesson(index: number) {
+    setLessonIndex(index);
+    setMessage('');
+    setView('question');
+  }
+
+  function backToOverview() {
+    setView('overview');
+  }
+
+  if (view === 'overview') {
+    return (
+      <div className="card stack" data-testid="learn-overview">
         <div className="hero">
           <div>
-            <h2>Lektionen</h2>
-            <p className="muted">{courseName} · linearer Pfad wie im Pflichtenheft.</p>
+            <h2>Übersicht</h2>
+            <p className="muted">{courseName} · {doneCount}/{totalLessons} Lektionen bestanden</p>
           </div>
           <Lumio />
         </div>
-        {lessons.map((item, index) => {
-          const p = progressMap.get(item.id);
-          const done = completedLessons.has(item.id) || Boolean(p?.passed);
-          const inProgress = !done && (p?.last_question_index ?? 0) > 0;
-          const label = done ? '✓ ' : inProgress ? '… ' : '';
-          return (
+        {lesson ? (
+          <div className="card stack" data-testid="learn-current-lesson-card">
+            <div>
+              <div className="pill">Aktuelle Lektion</div>
+              <h3 style={{ margin: '8px 0 4px' }}>{lesson.position}. {lesson.title}</h3>
+              <p className="muted" style={{ margin: 0 }}>
+                {(() => {
+                  const p = progressMap.get(lesson.id);
+                  const total = lessonQuestions.length;
+                  if (lessonCompleted) return `Bestanden — Wiederholung möglich (${total} Fragen)`;
+                  const at = (p?.last_question_index ?? 0);
+                  if (at > 0 && at < total) return `Fortsetzen bei Frage ${at + 1} von ${total}`;
+                  return `${total} Fragen · Bestehensgrenze ${lesson.pass_score}%`;
+                })()}
+              </p>
+            </div>
+            <button
+              className="btn btn-primary"
+              data-testid="learn-start-current-question"
+              onClick={startOrResume}
+            >
+              {lessonCompleted
+                ? 'Lektion wiederholen'
+                : (progressMap.get(lesson.id)?.last_question_index ?? 0) > 0
+                  ? 'Weiterlernen'
+                  : 'Aktuelle Frage starten'}
+            </button>
+            {lessonCompleted ? (
+              <button
+                className="btn"
+                onClick={() => { restartLesson(); }}
+                data-testid="learn-lesson-restart-overview"
+              >
+                Lektion neu starten
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+        <div>
+          <h3 style={{ margin: '4px 0 8px' }}>Alle Lektionen</h3>
+          <div className="learn-overview-lessons" data-testid="learn-lessons-list">
+            {lessons.map((item, index) => {
+              const p = progressMap.get(item.id);
+              const done = completedLessons.has(item.id) || Boolean(p?.passed);
+              const inProgress = !done && (p?.last_question_index ?? 0) > 0;
+              const status = done ? '✓ bestanden' : inProgress ? '… läuft' : 'neu';
+              return (
+                <button
+                  key={item.id}
+                  className="lesson-row"
+                  data-testid={`learn-lesson-button-${item.position}`}
+                  data-lesson-status={done ? 'done' : inProgress ? 'in-progress' : 'new'}
+                  data-current={index === lessonIndex ? 'true' : 'false'}
+                  onClick={() => openLesson(index)}
+                >
+                  <span className="lesson-title">{item.position}. {item.title}</span>
+                  <span className="lesson-status">{status}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        {message ? <div className="card" data-testid="learn-lesson-summary">{message}</div> : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className="card compact-question" data-testid="learn-question-view">
+      {question ? (
+        <>
+          <div className="cq-header">
+            <div className="cq-pills">
+              <span className="pill" data-testid="learn-question-counter">
+                {questionIndex + 1} / {lessonQuestions.length}
+              </span>
+              <span className="pill" style={{ background: 'rgba(255,255,255,.04)', color: 'var(--muted)', borderColor: 'rgba(76,123,255,.18)' }}>
+                {lesson.position}. {lesson.title}
+              </span>
+              {lessonCompleted ? (
+                <span className="pill" data-testid="learn-lesson-completed-badge">✓ bestanden</span>
+              ) : null}
+              {resumedFrom !== null ? (
+                <span className="pill" data-testid="learn-resume-indicator">Fortgesetzt</span>
+              ) : null}
+            </div>
             <button
               className="btn"
-              key={item.id}
-              data-testid={`learn-lesson-button-${item.position}`}
-              data-lesson-status={done ? 'done' : inProgress ? 'in-progress' : 'new'}
-              onClick={() => {
-                setLessonIndex(index);
-                setMessage('');
-              }}
+              data-testid="learn-back-to-overview"
+              onClick={backToOverview}
+              style={{ padding: '6px 10px', fontSize: 12, borderRadius: 12 }}
             >
-              {label}
-              {item.position}. {item.title}
+              ← Übersicht
             </button>
-          );
-        })}
-      </div>
-      <div className="card stack">
-        {question ? (
-          <>
-            <div className="hero">
-              <div>
-                <div className="pill" data-testid="learn-question-counter">
-                  Frage {questionIndex + 1} / {lessonQuestions.length}
-                </div>
-                {lessonCompleted ? (
-                  <div className="pill" data-testid="learn-lesson-completed-badge">
-                    ✓ Bestanden — Wiederholung möglich (keine zusätzlichen XP)
-                  </div>
-                ) : null}
-                {resumedFrom !== null ? (
-                  <div className="pill" data-testid="learn-resume-indicator">
-                    Fortgesetzt bei Frage {resumedFrom + 1}
-                  </div>
-                ) : null}
-                <h2>{question.prompt}</h2>
-                <p className="muted">Lumio gibt direktes Feedback mit Erklärung.</p>
-              </div>
-              <Lumio />
-            </div>
+          </div>
+          <h2 className="cq-prompt">{question.prompt}</h2>
+          <div className="cq-options">
             {options.map((option) => {
               const cls = selected
                 ? option.key === question.correct_option
@@ -263,20 +337,23 @@ export function LearnClient({
                 : 'option';
               return (
                 <button key={option.key} className={cls} onClick={() => choose(option.key)}>
+                  <strong style={{ marginRight: 6 }}>{option.key}</strong>
                   {option.value}
                 </button>
               );
             })}
-            {selected ? (
-              <div className="card" data-testid="learn-question-feedback">
-                <span data-testid="learn-xp-feedback">
-                  {xpLabel(selected === question.correct_option)}
-                </span>{' '}
-                — {question.explanation}
-              </div>
-            ) : null}
+          </div>
+          {selected ? (
+            <div className="cq-feedback" data-testid="learn-question-feedback">
+              <strong data-testid="learn-xp-feedback">
+                {xpLabel(selected === question.correct_option)}
+              </strong>
+              {question.explanation ? <> — {question.explanation}</> : null}
+            </div>
+          ) : null}
+          <div className="cq-actions">
             <button className="btn btn-primary" onClick={next} disabled={!selected}>
-              {questionIndex < lessonQuestions.length - 1 ? 'Nächste Frage' : 'Lektion abschliessen'}
+              {questionIndex < lessonQuestions.length - 1 ? 'Nächste' : 'Abschliessen'}
             </button>
             {lessonCompleted ? (
               <button
@@ -284,15 +361,19 @@ export function LearnClient({
                 onClick={restartLesson}
                 data-testid="learn-lesson-restart"
               >
-                Lektion neu starten
+                Neu starten
               </button>
             ) : null}
-            {message ? <div data-testid="learn-lesson-summary">{message}</div> : null}
-          </>
-        ) : (
+          </div>
+        </>
+      ) : (
+        <>
           <p className="muted">Keine Fragen vorhanden.</p>
-        )}
-      </div>
+          <button className="btn" data-testid="learn-back-to-overview" onClick={backToOverview}>
+            ← Zurück zur Übersicht
+          </button>
+        </>
+      )}
     </div>
   );
 }

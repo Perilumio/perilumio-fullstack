@@ -288,6 +288,117 @@ export function BattleClient({ courseName, hasQuestions }: { courseName: string;
   const liveCorrect = echoForThisQuestion?.correct
     ?? (youAnswered && correct !== null && selected !== null ? correct === selected : null);
 
+  if (!finished && q) {
+    return (
+      <div className="card compact-question" data-testid="battle-compact-question">
+        <div className="compact-scorebox" data-testid="battle-scoreboard">
+          <CompactPlayer
+            label="Du"
+            player={state.self_profile}
+            score={state.you.score}
+            testId="battle-self"
+            scoreTestId="battle-score-self"
+            creditTestId="battle-point-credit-self"
+            showCredit={pointCredit.self}
+          />
+          <div className="compact-vs">⚔️</div>
+          {state.opponent ? (
+            <CompactPlayer
+              label="Gegner"
+              player={state.opponent}
+              score={state.opponent.score}
+              testId="battle-opponent"
+              scoreTestId="battle-score-enemy"
+              creditTestId="battle-point-credit-opponent"
+              showCredit={pointCredit.opponent}
+            />
+          ) : (
+            <div className="muted">—</div>
+          )}
+        </div>
+        <div className="cq-header">
+          <div className="cq-pills">
+            <span className="pill" data-testid="battle-question-progress">
+              {state.current_question_index + 1} / {state.question_count}
+            </span>
+            <span className="pill" style={{ background: 'rgba(255,255,255,.04)', color: 'var(--muted)', borderColor: 'rgba(76,123,255,.18)' }}>
+              {courseName}
+            </span>
+          </div>
+          <button
+            className="btn"
+            onClick={cancelOrLeave}
+            data-testid="battle-leave-match"
+            style={{ padding: '6px 10px', fontSize: 12, borderRadius: 12 }}
+          >
+            Verlassen
+          </button>
+        </div>
+        <h2 className="cq-prompt" data-testid="battle-current-question">{q.prompt}</h2>
+        <div className="cq-options" data-testid="battle-answer-buttons">
+          {q.options.map((option) => {
+            const showResult = youAnswered && correct !== null;
+            let cls = 'option';
+            if (showResult) {
+              if (option.key === correct) cls = 'option correct';
+              else if (option.key === selected) cls = 'option wrong';
+            }
+            return (
+              <button
+                key={option.key}
+                className={cls}
+                disabled={youAnswered || submitting}
+                onClick={() => answer(option.key)}
+                data-testid={`battle-answer-${option.key}`}
+              >
+                <strong style={{ marginRight: 6 }}>{option.key}</strong>
+                {option.text}
+              </button>
+            );
+          })}
+        </div>
+        {youAnswered ? (
+          <>
+            {liveCorrect !== null ? (
+              <div
+                className={`battle-feedback ${liveCorrect ? 'is-correct' : 'is-wrong'}`}
+                data-testid="battle-answer-feedback"
+                data-correct={liveCorrect ? 'true' : 'false'}
+              >
+                {liveCorrect ? (
+                  <>
+                    <span aria-hidden="true">✅</span>
+                    <strong>Richtig</strong>
+                    <span className="battle-feedback-points">+1</span>
+                  </>
+                ) : (
+                  <>
+                    <span aria-hidden="true">❌</span>
+                    <strong>Falsch</strong>
+                  </>
+                )}
+              </div>
+            ) : null}
+            {!opponentAnswered ? (
+              <div className="battle-waiting" data-testid="battle-waiting-opponent">
+                <span className="battle-hourglass" aria-hidden="true">⏳</span>
+                <span>Warten auf Gegner…</span>
+              </div>
+            ) : (
+              <div className="muted" data-testid="battle-next-soon" style={{ fontSize: 12 }}>
+                Nächste Frage gleich…
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="muted" style={{ fontSize: 12 }}>
+            {opponentAnswered ? 'Gegner hat geantwortet. Du bist dran!' : 'Wähle eine Antwort.'}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="card stack">
       <div className="scorebox" data-testid="battle-scoreboard">
@@ -315,80 +426,6 @@ export function BattleClient({ courseName, hasQuestions }: { courseName: string;
           <div className="muted">—</div>
         )}
       </div>
-
-      {!finished && q ? (
-        <>
-          <div className="pill" data-testid="battle-question-progress">
-            {state.current_question_index + 1} / {state.question_count} · {courseName}
-          </div>
-          <h2 data-testid="battle-current-question">{q.prompt}</h2>
-          <div className="stack" data-testid="battle-answer-buttons">
-            {q.options.map((option) => {
-              const showResult = youAnswered && correct !== null;
-              let cls = 'option';
-              if (showResult) {
-                if (option.key === correct) cls = 'option correct';
-                else if (option.key === selected) cls = 'option wrong';
-              }
-              return (
-                <button
-                  key={option.key}
-                  className={cls}
-                  disabled={youAnswered || submitting}
-                  onClick={() => answer(option.key)}
-                  data-testid={`battle-answer-${option.key}`}
-                >
-                  <strong style={{ marginRight: 8 }}>{option.key}</strong>
-                  {option.text}
-                </button>
-              );
-            })}
-          </div>
-
-          {youAnswered ? (
-            <>
-              {liveCorrect !== null ? (
-                <div
-                  className={`battle-feedback ${liveCorrect ? 'is-correct' : 'is-wrong'}`}
-                  data-testid="battle-answer-feedback"
-                  data-correct={liveCorrect ? 'true' : 'false'}
-                >
-                  {liveCorrect ? (
-                    <>
-                      <span aria-hidden="true">✅</span>
-                      <strong>Richtig</strong>
-                      <span className="battle-feedback-points">+1 Punkt</span>
-                    </>
-                  ) : (
-                    <>
-                      <span aria-hidden="true">❌</span>
-                      <strong>Leider falsch</strong>
-                    </>
-                  )}
-                </div>
-              ) : null}
-              {!opponentAnswered ? (
-                <div className="battle-waiting" data-testid="battle-waiting-opponent">
-                  <span className="battle-hourglass" aria-hidden="true">⏳</span>
-                  <span>Warten auf Gegner…</span>
-                </div>
-              ) : (
-                <div className="muted" data-testid="battle-next-soon">
-                  Beide Spieler haben geantwortet. Nächste Frage gleich…
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="muted">
-              {opponentAnswered ? 'Gegner hat bereits geantwortet. Du bist dran!' : 'Wähle eine Antwort.'}
-            </div>
-          )}
-
-          <button className="btn" onClick={cancelOrLeave} data-testid="battle-leave-match">
-            Match verlassen
-          </button>
-        </>
-      ) : null}
 
       {finished ? (
         <div className="card stack" data-testid="battle-final-result">
@@ -435,6 +472,42 @@ function PlayerCard({
       <Avatar avatarKey={player.avatar_key} size="sm" />
       <div className="muted" style={{ fontSize: 12 }}>{label}</div>
       <div data-testid={testId ? `${testId}-name` : undefined} style={{ fontWeight: 600 }}>
+        {player.username}
+      </div>
+      {typeof score === 'number' ? (
+        <div className="battle-score-wrap">
+          <div className="kpi" data-testid={scoreTestId}>{score}</div>
+          {showCredit ? (
+            <div className="battle-point-credit" data-testid={creditTestId} aria-live="polite">+1</div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function CompactPlayer({
+  label,
+  player,
+  score,
+  testId,
+  scoreTestId,
+  creditTestId,
+  showCredit,
+}: {
+  label: string;
+  player: PlayerPublic;
+  score?: number;
+  testId?: string;
+  scoreTestId?: string;
+  creditTestId?: string;
+  showCredit?: boolean;
+}) {
+  return (
+    <div className="compact-player" data-testid={testId}>
+      <Avatar avatarKey={player.avatar_key} size="sm" />
+      <div className="muted">{label}</div>
+      <div data-testid={testId ? `${testId}-name` : undefined} className="compact-name">
         {player.username}
       </div>
       {typeof score === 'number' ? (
