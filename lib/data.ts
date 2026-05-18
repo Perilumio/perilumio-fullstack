@@ -8,13 +8,26 @@ export async function getCourseBundle(moduleId: string){ const supabase = await 
 
 export async function getCourseLessons(courseKey: CourseKey){
   const supabase = await createClient();
-  const { data: modules } = await supabase.from('modules').select('id,title,description').eq('course_key', courseKey);
-  const moduleIds = (modules ?? []).map((m: any) => m.id);
+  const { data: modules } = await supabase
+    .from('modules')
+    .select('id,title,description,position')
+    .eq('course_key', courseKey)
+    .order('position', { ascending: true });
+  const moduleList = (modules ?? []) as { id: string; position: number | null }[];
+  const moduleIds = moduleList.map((m) => m.id);
   if(moduleIds.length === 0) return { modules: [], lessons: [], questions: [] };
+  const modulePosition = new Map<string, number>();
+  moduleList.forEach((m, idx) => modulePosition.set(m.id, m.position ?? idx));
   const { data: lessons } = await supabase.from('lessons').select('*').in('module_id', moduleIds).order('position');
-  const lessonIds = (lessons ?? []).map((l: any) => l.id);
+  const orderedLessons = (lessons ?? []).slice().sort((a: any, b: any) => {
+    const am = modulePosition.get(a.module_id) ?? 0;
+    const bm = modulePosition.get(b.module_id) ?? 0;
+    if (am !== bm) return am - bm;
+    return (a.position ?? 0) - (b.position ?? 0);
+  });
+  const lessonIds = orderedLessons.map((l: any) => l.id);
   const qr = lessonIds.length ? await supabase.from('questions').select('*').in('lesson_id', lessonIds).order('position') : { data: [] as any };
-  return { modules: modules ?? [], lessons: lessons ?? [], questions: qr.data ?? [] };
+  return { modules: modules ?? [], lessons: orderedLessons, questions: qr.data ?? [] };
 }
 
 export async function getCourseQuestions(courseKey: CourseKey){

@@ -234,7 +234,7 @@ export function LearnClient({
           <div className="card stack" data-testid="learn-current-lesson-card">
             <div>
               <div className="pill">Aktuelle Lektion</div>
-              <h3 style={{ margin: '8px 0 4px' }}>{lesson.position}. {lesson.title}</h3>
+              <h3 style={{ margin: '8px 0 4px' }}>{lesson.title}</h3>
               <p className="muted" style={{ margin: 0 }}>
                 {(() => {
                   const p = progressMap.get(lesson.id);
@@ -285,7 +285,7 @@ export function LearnClient({
                   data-current={index === lessonIndex ? 'true' : 'false'}
                   onClick={() => openLesson(index)}
                 >
-                  <span className="lesson-title">{item.position}. {item.title}</span>
+                  <span className="lesson-title">{item.title}</span>
                   <span className="lesson-status">{status}</span>
                 </button>
               );
@@ -307,7 +307,7 @@ export function LearnClient({
                 {questionIndex + 1} / {lessonQuestions.length}
               </span>
               <span className="pill" style={{ background: 'rgba(255,255,255,.04)', color: 'var(--muted)', borderColor: 'rgba(76,123,255,.18)' }}>
-                {lesson.position}. {lesson.title}
+                {lesson.title}
               </span>
               {lessonCompleted ? (
                 <span className="pill" data-testid="learn-lesson-completed-badge">✓ bestanden</span>
