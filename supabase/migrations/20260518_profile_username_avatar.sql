@@ -116,7 +116,10 @@ end;
 $$;
 
 -- 7. Re-create the leaderboard view to expose username + avatar_key.
-create or replace view public.leaderboard as
+-- CREATE OR REPLACE VIEW cannot reorder/insert columns, so we drop and recreate.
+-- DROP VIEW IF EXISTS keeps this safe on both fresh and previously-migrated schemas.
+drop view if exists public.leaderboard;
+create view public.leaderboard as
   select id, display_name, username, avatar_key, xp, level, battle_points, created_at
   from public.profiles;
 
