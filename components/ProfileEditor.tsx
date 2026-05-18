@@ -78,7 +78,7 @@ export function ProfileEditor({ initialUsername, initialAvatarKey }: Props) {
                 data-testid={`avatar-option-${a.key}`}
                 data-selected={selected ? 'true' : 'false'}
               >
-                <img src={avatarSrc(a.key)} alt="" width={96} height={96} loading="lazy" />
+                <img src={avatarSrc(a.key)} alt="" width={240} height={216} loading="lazy" />
                 <span className="avatar-option-label">{a.label}</span>
               </button>
             );
