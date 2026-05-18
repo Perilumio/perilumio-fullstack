@@ -24,7 +24,8 @@ export function Avatar({
       style={{
         width: px,
         height: px,
-        objectFit: 'cover',
+        objectFit: 'contain',
+        objectPosition: 'center',
         borderRadius: 16,
         border: '1px solid rgba(76,123,255,.28)',
         background: 'linear-gradient(180deg,rgba(16,25,45,.96),rgba(12,18,34,.96))',
