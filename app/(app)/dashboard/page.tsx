@@ -1,20 +1,22 @@
 import Link from 'next/link';
-import { AppShell, Lumio } from '@/components/AppShell';
+import { AppShell } from '@/components/AppShell';
+import { Avatar } from '@/components/Avatar';
 import { getDashboardData } from '@/lib/data';
 export default async function DashboardPage(){
   const { profile, lessons, progress } = await getDashboardData();
   const completed = progress.filter((item: any) => item.passed).length;
   const percent = lessons.length ? Math.round((completed / lessons.length) * 100) : 0;
+  const greetingName = profile?.username ?? profile?.display_name ?? 'Lehrling';
   return (
     <AppShell showHomeButton={false}>
       <section className="stack">
         <div className="card hero">
           <div>
             <span className="pill">● Live MVP</span>
-            <h1>Willkommen zurück, {profile?.display_name ?? 'Lehrling'}.</h1>
+            <h1>Willkommen zurück, {greetingName}.</h1>
             <p className="muted">Lumio begleitet deinen Lernfortschritt im schwarz-neonblauen App-Look.</p>
           </div>
-          <Lumio />
+          <Avatar avatarKey={profile?.avatar_key} size="lg" testId="dashboard-avatar" />
         </div>
         <div className="grid grid-4">
           <div className="card"><div className="muted">XP</div><div className="kpi">{profile?.xp ?? 0}</div></div>
