@@ -103,11 +103,8 @@ export default async function ProfilePage() {
   const username = profile?.username ?? deriveUsername(user);
   const avatarKey = profile?.avatar_key ?? DEFAULT_AVATAR_KEY;
   const xp = profile?.xp ?? 0;
-  const level = profile?.level ?? 1;
   const battlePoints = profile?.battle_points ?? 0;
   const activeCourse = (profile?.active_course_key ?? 'strassenbau') as CourseKey;
-  const xpIntoLevel = xp % 100;
-  const xpToNextLevel = 100 - xpIntoLevel;
 
   return (
     <AppShell>
@@ -124,25 +121,18 @@ export default async function ProfilePage() {
           <Avatar avatarKey={avatarKey} size="lg" testId="profile-current-avatar" />
         </div>
 
-        <div className="grid grid-4" data-testid="profile-stats">
-          <div className="card">
+        <div className="grid stats-grid" data-testid="profile-stats">
+          <div className="card stat-card">
             <div className="muted">XP</div>
             <div className="kpi" data-testid="profile-xp">{xp}</div>
             <div className="muted" style={{ fontSize: 12 }}>aus Lernpfad</div>
           </div>
-          <div className="card">
-            <div className="muted">Level</div>
-            <div className="kpi" data-testid="profile-level">{level}</div>
-            <div className="muted" style={{ fontSize: 12 }} data-testid="profile-xp-to-next">
-              noch {xpToNextLevel} XP
-            </div>
-          </div>
-          <div className="card">
-            <div className="muted">Battlepunkte</div>
+          <div className="card stat-card">
+            <div className="muted">BP</div>
             <div className="kpi" data-testid="profile-bp">{battlePoints}</div>
             <div className="muted" style={{ fontSize: 12 }}>aus Quizbattle</div>
           </div>
-          <div className="card">
+          <div className="card stat-card">
             <div className="muted">Gesamtfortschritt</div>
             <div className="kpi" data-testid="profile-overall-percent">{overallPercent}%</div>
             <div className="muted" style={{ fontSize: 12 }} data-testid="profile-overall-counts">

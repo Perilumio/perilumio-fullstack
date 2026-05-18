@@ -60,11 +60,11 @@ export default async function DashboardPage() {
           </div>
           <Avatar avatarKey={profile?.avatar_key} size="lg" testId="dashboard-avatar" />
         </div>
-        <div className="grid grid-4">
-          <div className="card"><div className="muted">XP</div><div className="kpi">{profile?.xp ?? 0}</div></div>
-          <div className="card"><div className="muted">Level</div><div className="kpi">{profile?.level ?? 1}</div></div>
-          <div className="card"><div className="muted">Lernfortschritt</div><div className="kpi">{percent}%</div></div>
-          <div className="card"><div className="muted">Lektionen</div><div className="kpi">{completed}/{lessons.length}</div></div>
+        <div className="grid stats-grid" data-testid="dashboard-stats">
+          <div className="card stat-card"><div className="muted">XP</div><div className="kpi" data-testid="dashboard-xp">{profile?.xp ?? 0}</div></div>
+          <div className="card stat-card"><div className="muted">BP</div><div className="kpi" data-testid="dashboard-bp">{profile?.battle_points ?? 0}</div></div>
+          <div className="card stat-card"><div className="muted">Lernfortschritt</div><div className="kpi" data-testid="dashboard-percent">{percent}%</div></div>
+          <div className="card stat-card"><div className="muted">Lektionen</div><div className="kpi" data-testid="dashboard-lessons">{completed}/{lessons.length}</div></div>
         </div>
         <nav className="home-menu" aria-label="Hauptmenü" data-testid="home-menu">
           {TILES.map((t) => (
