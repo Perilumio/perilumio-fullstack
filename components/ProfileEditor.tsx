@@ -1,5 +1,6 @@
 'use client';
 import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { AVATARS, DEFAULT_AVATAR_KEY, USERNAME_MAX, USERNAME_MIN, avatarSrc, validateUsername } from '@/lib/avatars';
 import { saveProfile, type SaveProfileResult } from '@/app/actions/profile';
 
@@ -15,6 +16,7 @@ export function ProfileEditor({ initialUsername, initialAvatarKey }: Props) {
   );
   const [result, setResult] = useState<SaveProfileResult | null>(null);
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
 
   const localCheck = validateUsername(username);
   const localError = !localCheck.ok ? localCheck.error : null;
@@ -25,6 +27,7 @@ export function ProfileEditor({ initialUsername, initialAvatarKey }: Props) {
     startTransition(async () => {
       const res = await saveProfile(null, fd);
       setResult(res);
+      if (res.ok) router.refresh();
     });
   }
 

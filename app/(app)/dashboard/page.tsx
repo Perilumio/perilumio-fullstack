@@ -4,6 +4,9 @@ import { Avatar } from '@/components/Avatar';
 import { getDashboardData } from '@/lib/data';
 import { getActiveCourseKey, courseLabel } from '@/lib/courses';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 type TileDef = {
   href: string;
   title: string;
