@@ -28,6 +28,14 @@ function nameOf(row: ProfileRow) {
   return row.username || row.display_name || 'Lehrling';
 }
 
+function XIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
+      <path d="M5 5l10 10M15 5L5 15" />
+    </svg>
+  );
+}
+
 export default function FriendsClient({ friends, self }: Props) {
   const router = useRouter();
   const [query, setQuery] = useState('');
@@ -165,12 +173,14 @@ export default function FriendsClient({ friends, self }: Props) {
         {!isMe && (
           <button
             type="button"
-            className="btn"
+            className="btn-icon-x"
             onClick={() => removeFriend(row.id)}
             disabled={pending || isPending}
             data-testid="friends-remove-button"
+            aria-label="Freund entfernen"
+            title="Freund entfernen"
           >
-            {pending ? '…' : 'Entfernen'}
+            {pending ? '…' : <XIcon />}
           </button>
         )}
       </div>
@@ -223,12 +233,14 @@ export default function FriendsClient({ friends, self }: Props) {
                   {row.is_friend ? (
                     <button
                       type="button"
-                      className="btn"
+                      className="btn-icon-x"
                       onClick={() => removeFriend(row.id)}
                       disabled={pending || isPending}
                       data-testid="friends-remove-button"
+                      aria-label="Freund entfernen"
+                      title="Freund entfernen"
                     >
-                      {pending ? '…' : 'Entfernen'}
+                      {pending ? '…' : <XIcon />}
                     </button>
                   ) : (
                     <button
