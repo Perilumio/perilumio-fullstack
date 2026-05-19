@@ -165,6 +165,7 @@ if (args.includes('--all') || args.length === 0) {
     'supabase/seeds/schreiner_fragenkatalog_bildungsplan.csv',
     'supabase/seeds/fage_fragenkatalog_bildungsplan.csv',
     'supabase/seeds/kv_fragenkatalog_bildungsplan.csv',
+    'supabase/seeds/informatiker_fragenkatalog_bildungsplan.csv',
   ];
 } else {
   csvPaths = args.filter(a => !a.startsWith('--'));

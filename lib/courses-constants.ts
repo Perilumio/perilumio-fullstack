@@ -1,4 +1,4 @@
-export type CourseKey = 'strassenbau' | 'abu' | 'automechaniker' | 'schreiner' | 'fage' | 'kv';
+export type CourseKey = 'strassenbau' | 'abu' | 'automechaniker' | 'schreiner' | 'fage' | 'kv' | 'informatiker';
 
 type Course = { key: CourseKey; label: string; description: string };
 
@@ -12,6 +12,7 @@ const COURSE_DEFINITIONS: ReadonlyArray<Course> = [
   { key: 'schreiner',      label: 'Schreiner',      description: 'Berufsspezifischer Kurs · Bildungsplan EFZ' },
   { key: 'fage',           label: 'FaGe',           description: 'Fachfrau/Fachmann Gesundheit · Bildungsplan EFZ' },
   { key: 'kv',             label: 'KV',             description: 'Kauffrau/Kaufmann · Bildungsplan EFZ (BiVo 2023)' },
+  { key: 'informatiker',   label: 'Informatik',     description: 'Informatiker/in · Bildungsplan EFZ (BiVo 2021)' },
 ];
 
 export function sortCourses<T extends { key: CourseKey; label: string }>(courses: ReadonlyArray<T>): T[] {
