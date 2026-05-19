@@ -5,9 +5,10 @@ export type AnswerFeedbackKind = 'correct' | 'wrong';
 
 type Trigger = { id: number; kind: AnswerFeedbackKind } | null;
 
-const SPARK_COUNT = 28;
-const RING_SPARK_COUNT = 14;
-const EFFECT_MS = 1000;
+const SPARK_COUNT = 40;
+const RING_SPARK_COUNT = 20;
+const TRAIL_SPARK_COUNT = 16;
+const EFFECT_MS = 1200;
 
 function prefersReducedMotion() {
   try {
@@ -26,15 +27,82 @@ function vibrate(pattern: number | number[]) {
   } catch {}
 }
 
-function playBuzzer() {
+function getAudioContext(): AudioContext | null {
   try {
     const AC: typeof AudioContext | undefined =
       (window as any).AudioContext || (window as any).webkitAudioContext;
-    if (!AC) return;
+    if (!AC) return null;
     const ctx = new AC();
     if (ctx.state === 'suspended') {
       void ctx.resume().catch(() => {});
     }
+    return ctx;
+  } catch {
+    return null;
+  }
+}
+
+function playSuccess() {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const master = ctx.createGain();
+    master.gain.setValueAtTime(0.0001, now);
+    master.gain.exponentialRampToValueAtTime(0.32, now + 0.015);
+    master.gain.exponentialRampToValueAtTime(0.0001, now + 0.9);
+    master.connect(ctx.destination);
+
+    // Bright ascending arpeggio: C5 -> E5 -> G5 -> C6
+    const notes: Array<[number, number]> = [
+      [523.25, 0.0],
+      [659.25, 0.09],
+      [783.99, 0.18],
+      [1046.5, 0.27],
+    ];
+    for (const [freq, delay] of notes) {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, now + delay);
+      g.gain.setValueAtTime(0.0001, now + delay);
+      g.gain.exponentialRampToValueAtTime(0.5, now + delay + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + delay + 0.35);
+      osc.connect(g);
+      g.connect(master);
+      osc.start(now + delay);
+      osc.stop(now + delay + 0.4);
+    }
+
+    // Soft sine sparkle on top
+    const shimmer = ctx.createOscillator();
+    const sg = ctx.createGain();
+    shimmer.type = 'sine';
+    shimmer.frequency.setValueAtTime(1568, now + 0.25);
+    shimmer.frequency.exponentialRampToValueAtTime(2093, now + 0.55);
+    sg.gain.setValueAtTime(0.0001, now + 0.25);
+    sg.gain.exponentialRampToValueAtTime(0.18, now + 0.28);
+    sg.gain.exponentialRampToValueAtTime(0.0001, now + 0.7);
+    shimmer.connect(sg);
+    sg.connect(master);
+    shimmer.start(now + 0.25);
+    shimmer.stop(now + 0.75);
+
+    const stopAt = now + 1.0;
+    shimmer.onended = () => {
+      try { ctx.close(); } catch {}
+    };
+    // Safety close
+    setTimeout(() => {
+      try { if (ctx.state !== 'closed') ctx.close(); } catch {}
+    }, Math.max(1100, (stopAt - now) * 1000 + 200));
+  } catch {}
+}
+
+function playBuzzer() {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
     const now = ctx.currentTime;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -65,7 +133,8 @@ export function AnswerFeedback({ trigger }: { trigger: Trigger }) {
       playBuzzer();
       vibrate([35, 60, 90]);
     } else {
-      vibrate(45);
+      playSuccess();
+      vibrate([20, 40, 25, 40, 60]);
     }
     if (timerRef.current) window.clearTimeout(timerRef.current);
     timerRef.current = window.setTimeout(() => {
@@ -98,11 +167,19 @@ export function AnswerFeedback({ trigger }: { trigger: Trigger }) {
             <span
               key={`r-${active.id}-${i}`}
               className="answer-fx-spark answer-fx-spark-ring"
-              style={{ ['--a' as any]: `${(360 / RING_SPARK_COUNT) * i + 12}deg` }}
+              style={{ ['--a' as any]: `${(360 / RING_SPARK_COUNT) * i + 9}deg` }}
+            />
+          ))}
+          {Array.from({ length: TRAIL_SPARK_COUNT }).map((_, i) => (
+            <span
+              key={`t-${active.id}-${i}`}
+              className="answer-fx-spark answer-fx-spark-trail"
+              style={{ ['--a' as any]: `${(360 / TRAIL_SPARK_COUNT) * i + 4}deg` }}
             />
           ))}
           <span className="answer-fx-core" />
           <span className="answer-fx-ring" />
+          <span className="answer-fx-ring answer-fx-ring-2" />
         </div>
       </div>
     );
