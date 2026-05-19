@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { AppShell } from '@/components/AppShell';
 import { Avatar } from '@/components/Avatar';
@@ -126,6 +127,20 @@ export default async function ProfilePage() {
           <Avatar avatarKey={avatarKey} size="lg" testId="profile-current-avatar" />
         </div>
 
+        <div className="card stack" data-testid="profile-editor-card">
+          <h2>Avatar & Benutzername</h2>
+          <p className="muted">Wähle deinen Avatar und Benutzernamen.</p>
+          <ProfileEditor initialUsername={username} initialAvatarKey={avatarKey} />
+        </div>
+
+        <Link
+          href="/courses"
+          className="btn"
+          data-testid="profile-switch-course-link"
+        >
+          Zur Kursauswahl
+        </Link>
+
         <div className="grid stats-grid" data-testid="profile-stats">
           <div className="card stat-card">
             <div className="muted">XP</div>
@@ -191,12 +206,7 @@ export default async function ProfilePage() {
           ))}
         </div>
 
-        <section className="grid grid-2">
-          <div className="card stack" data-testid="profile-editor-card">
-            <h2>Avatar & Benutzername</h2>
-            <p className="muted">Wähle deinen Avatar und Benutzernamen.</p>
-            <ProfileEditor initialUsername={username} initialAvatarKey={avatarKey} />
-          </div>
+        <section className="stack">
           <div className="card stack" data-testid="profile-account-card">
             <h2>Konto</h2>
             <div>
