@@ -163,6 +163,7 @@ if (args.includes('--all') || args.length === 0) {
     'supabase/seeds/strassenbau_fragenkatalog_30_pro_lektion.csv',
     'supabase/seeds/automechaniker_fragenkatalog_bildungsplan.csv',
     'supabase/seeds/schreiner_fragenkatalog_bildungsplan.csv',
+    'supabase/seeds/fage_fragenkatalog_bildungsplan.csv',
   ];
 } else {
   csvPaths = args.filter(a => !a.startsWith('--'));
