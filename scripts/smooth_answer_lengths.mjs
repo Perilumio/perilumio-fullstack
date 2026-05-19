@@ -18,7 +18,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const QUALIFIERS = [
-  ' im normalen Werkstattbetrieb',
+  ' im normalen Betriebsablauf',
   ' bei sachgemässer Ausführung',
   ' im üblichen Berufsalltag',
   ' nach gängiger Praxis',
@@ -27,8 +27,8 @@ const QUALIFIERS = [
   ' bei vergleichbaren Aufgaben',
   ' im konkreten Auftrag',
   ' im laufenden Tagesgeschäft',
-  ' im Werkstattumfeld',
-  ' im Produktionsalltag',
+  ' im üblichen Arbeitsumfeld',
+  ' im normalen Praxisalltag',
   ' bei sachgemässem Ablauf',
 ];
 
