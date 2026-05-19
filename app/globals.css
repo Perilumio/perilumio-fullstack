@@ -102,3 +102,12 @@
 .course-empty{padding:14px;text-align:center;font-size:13px}
 @media (max-width:480px){.course-list{max-height:60vh;gap:5px}.course-row{padding:7px 10px;border-radius:12px;min-height:46px;gap:8px}.course-row-title{font-size:13.5px}.course-row-sub{font-size:11px}.course-row-btn{padding:7px 10px;font-size:12.5px;border-radius:11px}.course-row-pill{padding:4px 9px;font-size:10.5px}}
 @media (max-width:480px){.learn-overview-lessons .lesson-row{padding:9px 10px;border-radius:12px}.learn-overview-lessons .lesson-row .lesson-title{font-size:13.5px}}
+.answer-fx{position:fixed;inset:0;pointer-events:none;z-index:9999;display:flex;align-items:center;justify-content:center;contain:layout paint;will-change:opacity}
+.answer-fx-correct .answer-fx-burst{position:relative;width:0;height:0}
+.answer-fx-correct .answer-fx-core{position:absolute;left:-12px;top:-12px;width:24px;height:24px;border-radius:50%;background:radial-gradient(circle,#bfeeff 0%,#37b8ff 55%,rgba(31,83,255,0) 75%);box-shadow:0 0 24px 8px rgba(55,184,255,.7),0 0 80px 20px rgba(31,83,255,.35);animation:fxCore 900ms ease-out forwards}
+.answer-fx-correct .answer-fx-spark{position:absolute;left:0;top:0;width:4px;height:4px;margin-left:-2px;margin-top:-2px;border-radius:50%;background:#bfeeff;box-shadow:0 0 10px 2px rgba(55,184,255,.95),0 0 22px 4px rgba(31,83,255,.55);transform:rotate(var(--a)) translateX(0);animation:fxSpark 900ms cubic-bezier(.18,.7,.25,1) forwards}
+.answer-fx-wrong .answer-fx-flash{position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(170,30,30,.55) 0%,rgba(120,20,20,.42) 45%,rgba(90,15,15,.3) 100%);animation:fxFlash 900ms ease-out forwards}
+@keyframes fxSpark{0%{transform:rotate(var(--a)) translateX(0) scale(.6);opacity:0}15%{opacity:1}100%{transform:rotate(var(--a)) translateX(46vmin) scale(.4);opacity:0}}
+@keyframes fxCore{0%{transform:scale(.4);opacity:0}20%{transform:scale(1.2);opacity:1}100%{transform:scale(2.6);opacity:0}}
+@keyframes fxFlash{0%{opacity:0}18%{opacity:1}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.answer-fx-correct .answer-fx-spark,.answer-fx-correct .answer-fx-core{animation-duration:200ms}.answer-fx-wrong .answer-fx-flash{animation-duration:300ms}}

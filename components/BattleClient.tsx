@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Avatar } from '@/components/Avatar';
+import { AnswerFeedback, type AnswerFeedbackKind } from '@/components/AnswerFeedback';
 
 type OptionKey = 'A' | 'B' | 'C' | 'D';
 
@@ -41,6 +42,7 @@ export function BattleClient({ courseName, hasQuestions }: { courseName: string;
   // Remember the answer outcome for the question we just answered, so the feedback
   // banner remains visible after the index advances and `last_correct_option` clears.
   const [answerEcho, setAnswerEcho] = useState<{ questionIndex: number; correct: boolean } | null>(null);
+  const [feedbackFx, setFeedbackFx] = useState<{ id: number; kind: AnswerFeedbackKind } | null>(null);
   // Track score deltas to animate the +1 credit on the player who scored.
   const [pointCredit, setPointCredit] = useState<{ self: boolean; opponent: boolean }>({ self: false, opponent: false });
   const prevScoresRef = useRef<{ self: number; opponent: number } | null>(null);
@@ -165,10 +167,12 @@ export function BattleClient({ courseName, hasQuestions }: { courseName: string;
         const next: BattleState = data.state;
         // Determine correctness from server's last_correct_option (set once we've answered).
         if (next.last_correct_option) {
+          const isCorrect = next.last_correct_option === option;
           setAnswerEcho({
             questionIndex: state.current_question_index,
-            correct: next.last_correct_option === option,
+            correct: isCorrect,
           });
+          setFeedbackFx({ id: Date.now(), kind: isCorrect ? 'correct' : 'wrong' });
         }
         applyState(next);
       }
@@ -291,6 +295,7 @@ export function BattleClient({ courseName, hasQuestions }: { courseName: string;
   if (!finished && q) {
     return (
       <div className="card compact-question" data-testid="battle-compact-question">
+        <AnswerFeedback trigger={feedbackFx} />
         <div className="compact-scorebox" data-testid="battle-scoreboard">
           <CompactPlayer
             label="Du"
