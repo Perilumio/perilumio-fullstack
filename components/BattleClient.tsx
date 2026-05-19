@@ -32,6 +32,12 @@ type Phase = 'idle' | 'joining' | 'in_match' | 'error';
 
 const POLL_INTERVAL_MS = 2500;
 const POINT_CREDIT_MS = 1400;
+// Hold the current question on screen for a beat after the server advances,
+// so feedback/score updates remain visible instead of flashing past.
+const NEXT_QUESTION_HOLD_MS = 1100;
+// Minimum time the "waiting for opponent" overlay stays visible once shown,
+// so it cannot flicker in and out when the opponent answers quickly.
+const WAITING_OVERLAY_MIN_MS = 1000;
 
 export function BattleClient({ courseName, hasQuestions }: { courseName: string; hasQuestions: boolean }) {
   const [phase, setPhase] = useState<Phase>('idle');
@@ -50,6 +56,16 @@ export function BattleClient({ courseName, hasQuestions }: { courseName: string;
   const lastQuestionIndexRef = useRef<number>(-1);
   const selfCreditTimerRef = useRef<number | null>(null);
   const oppCreditTimerRef = useRef<number | null>(null);
+  // Holds a queued BattleState whose `current_question_index` has advanced;
+  // we'll apply it after NEXT_QUESTION_HOLD_MS so the previous question's
+  // feedback and score updates remain visible long enough to register.
+  const pendingNextRef = useRef<BattleState | null>(null);
+  const holdTimerRef = useRef<number | null>(null);
+  // When we (the local player) most recently answered the current question.
+  // Used to enforce a minimum visible window for the waiting overlay.
+  const [answeredAt, setAnsweredAt] = useState<number | null>(null);
+  const [waitingMinElapsed, setWaitingMinElapsed] = useState(false);
+  const waitingMinTimerRef = useRef<number | null>(null);
 
   const stopPolling = useCallback(() => {
     if (pollRef.current !== null) {
@@ -58,17 +74,21 @@ export function BattleClient({ courseName, hasQuestions }: { courseName: string;
     }
   }, []);
 
-  const applyState = useCallback((next: BattleState) => {
+  const commitState = useCallback((next: BattleState) => {
     setState((prev) => {
-      // Detect new question → clear local selection (echo persists by questionIndex).
       if (prev && next.current_question_index !== prev.current_question_index) {
         setSelected(null);
+        setAnsweredAt(null);
+        setWaitingMinElapsed(false);
+        if (waitingMinTimerRef.current !== null) {
+          window.clearTimeout(waitingMinTimerRef.current);
+          waitingMinTimerRef.current = null;
+        }
       }
       lastQuestionIndexRef.current = next.current_question_index;
       return next;
     });
 
-    // Animate +1 when scores increase.
     const prevScores = prevScoresRef.current;
     const nextSelf = next.you.score;
     const nextOpp = next.opponent?.score ?? 0;
@@ -90,6 +110,39 @@ export function BattleClient({ courseName, hasQuestions }: { courseName: string;
     }
     prevScoresRef.current = { self: nextSelf, opponent: nextOpp };
   }, []);
+
+  const applyState = useCallback((next: BattleState) => {
+    const prevIdx = lastQuestionIndexRef.current;
+    // When the server advances to a new question, hold the current view briefly
+    // so the just-answered question's feedback/score remain visible. Skip the
+    // hold when the match is ending (final result should not be delayed) or
+    // when this is the first state we've seen.
+    const isAdvance =
+      prevIdx >= 0 &&
+      next.current_question_index > prevIdx &&
+      next.status === 'active';
+
+    if (isAdvance) {
+      pendingNextRef.current = next;
+      if (holdTimerRef.current !== null) window.clearTimeout(holdTimerRef.current);
+      holdTimerRef.current = window.setTimeout(() => {
+        const queued = pendingNextRef.current;
+        pendingNextRef.current = null;
+        holdTimerRef.current = null;
+        if (queued) commitState(queued);
+      }, NEXT_QUESTION_HOLD_MS);
+      return;
+    }
+
+    // If a newer-still state arrives during the hold (e.g. another advance or
+    // a status change), replace the queued one with the latest non-stale data.
+    if (pendingNextRef.current && next.current_question_index >= pendingNextRef.current.current_question_index) {
+      pendingNextRef.current = next;
+      return;
+    }
+
+    commitState(next);
+  }, [commitState]);
 
   const fetchState = useCallback(async (matchId: string) => {
     try {
@@ -116,6 +169,8 @@ export function BattleClient({ courseName, hasQuestions }: { courseName: string;
     stopPolling();
     if (selfCreditTimerRef.current !== null) window.clearTimeout(selfCreditTimerRef.current);
     if (oppCreditTimerRef.current !== null) window.clearTimeout(oppCreditTimerRef.current);
+    if (holdTimerRef.current !== null) window.clearTimeout(holdTimerRef.current);
+    if (waitingMinTimerRef.current !== null) window.clearTimeout(waitingMinTimerRef.current);
   }, [stopPolling]);
 
   const resetMatchLocal = useCallback(() => {
@@ -123,7 +178,19 @@ export function BattleClient({ courseName, hasQuestions }: { courseName: string;
     setSelected(null);
     setAnswerEcho(null);
     setPointCredit({ self: false, opponent: false });
+    setAnsweredAt(null);
+    setWaitingMinElapsed(false);
     prevScoresRef.current = null;
+    pendingNextRef.current = null;
+    lastQuestionIndexRef.current = -1;
+    if (holdTimerRef.current !== null) {
+      window.clearTimeout(holdTimerRef.current);
+      holdTimerRef.current = null;
+    }
+    if (waitingMinTimerRef.current !== null) {
+      window.clearTimeout(waitingMinTimerRef.current);
+      waitingMinTimerRef.current = null;
+    }
   }, []);
 
   const join = useCallback(async () => {
@@ -152,6 +219,13 @@ export function BattleClient({ courseName, hasQuestions }: { courseName: string;
     if (!state || submitting || state.you.answered_current) return;
     setSelected(option);
     setSubmitting(true);
+    // Start the minimum-visibility window for the waiting overlay.
+    setAnsweredAt(Date.now());
+    setWaitingMinElapsed(false);
+    if (waitingMinTimerRef.current !== null) window.clearTimeout(waitingMinTimerRef.current);
+    waitingMinTimerRef.current = window.setTimeout(() => {
+      setWaitingMinElapsed(true);
+    }, WAITING_OVERLAY_MIN_MS);
     try {
       const res = await fetch('/api/battle/answer', {
         method: 'POST',
@@ -340,27 +414,42 @@ export function BattleClient({ courseName, hasQuestions }: { courseName: string;
           </button>
         </div>
         <h2 className="cq-prompt" data-testid="battle-current-question">{q.prompt}</h2>
-        <div className="cq-options" data-testid="battle-answer-buttons">
-          {q.options.map((option) => {
-            const showResult = youAnswered && correct !== null;
-            let cls = 'option';
-            if (showResult) {
-              if (option.key === correct) cls = 'option correct';
-              else if (option.key === selected) cls = 'option wrong';
-            }
-            return (
-              <button
-                key={option.key}
-                className={cls}
-                disabled={youAnswered || submitting}
-                onClick={() => answer(option.key)}
-                data-testid={`battle-answer-${option.key}`}
-              >
-                <strong style={{ marginRight: 6 }}>{option.key}</strong>
-                {option.text}
-              </button>
-            );
-          })}
+        <div className="cq-options-wrap">
+          <div className="cq-options" data-testid="battle-answer-buttons">
+            {q.options.map((option) => {
+              const showResult = youAnswered && correct !== null;
+              let cls = 'option';
+              if (showResult) {
+                if (option.key === correct) cls = 'option correct';
+                else if (option.key === selected) cls = 'option wrong';
+              }
+              return (
+                <button
+                  key={option.key}
+                  className={cls}
+                  disabled={youAnswered || submitting}
+                  onClick={() => answer(option.key)}
+                  data-testid={`battle-answer-${option.key}`}
+                >
+                  <strong style={{ marginRight: 6 }}>{option.key}</strong>
+                  {option.text}
+                </button>
+              );
+            })}
+          </div>
+          {youAnswered && answeredAt !== null && (!opponentAnswered || !waitingMinElapsed) ? (
+            <div
+              className="battle-waiting-overlay"
+              data-testid="battle-waiting-opponent"
+              role="status"
+              aria-live="polite"
+            >
+              <div className="battle-waiting-card">
+                <span className="battle-hourglass-big" aria-hidden="true">⏳</span>
+                <div className="battle-waiting-text">Warten auf Gegner…</div>
+              </div>
+            </div>
+          ) : null}
         </div>
         {youAnswered ? (
           <>
@@ -384,16 +473,11 @@ export function BattleClient({ courseName, hasQuestions }: { courseName: string;
                 )}
               </div>
             ) : null}
-            {!opponentAnswered ? (
-              <div className="battle-waiting" data-testid="battle-waiting-opponent">
-                <span className="battle-hourglass" aria-hidden="true">⏳</span>
-                <span>Warten auf Gegner…</span>
-              </div>
-            ) : (
+            {opponentAnswered && waitingMinElapsed ? (
               <div className="muted" data-testid="battle-next-soon" style={{ fontSize: 12 }}>
                 Nächste Frage gleich…
               </div>
-            )}
+            ) : null}
           </>
         ) : (
           <div className="muted" style={{ fontSize: 12 }}>
