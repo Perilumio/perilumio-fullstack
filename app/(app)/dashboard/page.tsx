@@ -16,11 +16,11 @@ type TileDef = {
 };
 
 const TILES: ReadonlyArray<TileDef> = [
-  { href: '/courses',     title: 'Kurse',       sub: 'Aktiven Kurs wählen',   testId: 'menu-tile-courses',     icon: 'courses' },
   { href: '/learn',       title: 'Lernpfad',    sub: 'Schritt für Schritt',   testId: 'menu-tile-learn',       icon: 'path' },
   { href: '/battle',      title: 'Quizbattle',  sub: 'Im Duell antreten',     testId: 'menu-tile-battle',      icon: 'battle' },
-  { href: '/leaderboard', title: 'Rangliste',   sub: 'Bestenliste ansehen',   testId: 'menu-tile-leaderboard', icon: 'leaderboard' },
+  { href: '/courses',     title: 'Kurse',       sub: 'Aktiven Kurs wählen',   testId: 'menu-tile-courses',     icon: 'courses' },
   { href: '/profile',     title: 'Profil',      sub: 'Fortschritt & Konto',   testId: 'menu-tile-profile',     icon: 'profile' },
+  { href: '/leaderboard', title: 'Rangliste',   sub: 'Bestenliste ansehen',   testId: 'menu-tile-leaderboard', icon: 'leaderboard' },
   { href: '/friends',     title: 'Freunde',     sub: 'Lernumfeld & Vergleich', testId: 'menu-tile-friends',    icon: 'friends' },
 ];
 
