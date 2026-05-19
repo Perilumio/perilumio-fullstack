@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import type { ReactNode } from 'react';
+import { AnalyticsTracker } from '@/components/AnalyticsTracker';
 function Lumio(){ return <svg className="lumio" viewBox="0 0 120 120" aria-label="Lumio" role="img"><defs><linearGradient id="lumioGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#a6f1ff"/><stop offset="60%" stopColor="#5ecbff"/><stop offset="100%" stopColor="#4c7dff"/></linearGradient></defs><path d="M60 12c22 0 39 18 39 41 0 16-8 27-8 41 0 8-6 9-10 5l-7-7-8 9c-3 3-8 3-11 0l-8-9-7 7c-4 4-10 2-10-5 0-14-8-25-8-41 0-23 17-41 38-41z" fill="url(#lumioGrad)"/><ellipse cx="48" cy="49" rx="6" ry="8" fill="#09111f"/><ellipse cx="73" cy="49" rx="6" ry="8" fill="#09111f"/><path d="M47 71c5 5 21 5 26 0" stroke="#09111f" strokeWidth="5" strokeLinecap="round" fill="none"/><circle cx="37" cy="34" r="7" fill="rgba(255,255,255,.45)"/></svg>; }
 function HomeIcon(){ return <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><path d="M12 3.2 2.6 11.1a1 1 0 0 0 .65 1.76H5v7.05a1 1 0 0 0 1 1h3.5v-5.4a2.5 2.5 0 0 1 5 0v5.4H18a1 1 0 0 0 1-1V12.86h1.75a1 1 0 0 0 .65-1.76L12 3.2z" fill="currentColor"/></svg>; }
 function HomeButton({ href = '/dashboard', label = 'Zum Menü' }: { href?: string; label?: string }){ return <Link href={href} className="home-btn" aria-label={label} title={label} data-testid="home-button"><HomeIcon /></Link>; }
 function BrandLogoHeader(){ return <Link href="/dashboard" className="brand-logo-header" aria-label="Perilumio" title="Perilumio" data-testid="brand-logo-header"><Image src="/brand/perilumio-icon.png" alt="Perilumio" width={44} height={44} priority className="brand-logo-header-img" /></Link>; }
-export function AppShell({ children, showHomeButton = true }: { children: ReactNode; showHomeButton?: boolean }) { return <div className="shell-simple">{showHomeButton && <HomeButton />}<BrandLogoHeader /><main className="container">{children}</main></div>; }
+export function AppShell({ children, showHomeButton = true }: { children: ReactNode; showHomeButton?: boolean }) { return <div className="shell-simple"><AnalyticsTracker />{showHomeButton && <HomeButton />}<BrandLogoHeader /><main className="container">{children}</main></div>; }
 export { Lumio, HomeButton, BrandLogoHeader };
