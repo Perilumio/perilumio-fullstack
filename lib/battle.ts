@@ -64,7 +64,31 @@ async function loadProfiles(ids: string[]): Promise<Record<string, BattlePlayerP
   return out;
 }
 
-async function pickQuestionIds(courseKey: CourseKey): Promise<string[]> {
+// 32-bit FNV-1a hash. Cheap and good enough as a seed source for a per-match
+// PRNG. Mirrors the per-user lesson shuffle in components/LearnClient.tsx.
+function hashStringToSeed(input: string): number {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < input.length; i += 1) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return hash >>> 0;
+}
+
+// mulberry32: tiny deterministic PRNG. Same seed yields the same sequence on
+// every invocation, so both players in a match see identical question order.
+function mulberry32(seed: number): () => number {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let t = state;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+async function pickQuestionIds(courseKey: CourseKey, matchId: string): Promise<string[]> {
   const { data: modules } = await supabaseAdmin
     .from('modules')
     .select('id')
@@ -81,9 +105,13 @@ async function pickQuestionIds(courseKey: CourseKey): Promise<string[]> {
     .from('questions')
     .select('id')
     .in('lesson_id', lessonIds);
-  const ids = (questions ?? []).map((q) => q.id);
-  for (let i = ids.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+  // Sort the candidate pool by id so the shuffle input is independent of the
+  // database's row order; the seed alone then determines the result.
+  const ids = (questions ?? []).map((q) => q.id).sort();
+  if (ids.length === 0) return [];
+  const rand = mulberry32(hashStringToSeed(`battle::${matchId}`));
+  for (let i = ids.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rand() * (i + 1));
     [ids[i], ids[j]] = [ids[j], ids[i]];
   }
   return ids.slice(0, BATTLE_QUESTION_COUNT);
@@ -127,7 +155,7 @@ export async function findOrCreateMatch(userId: string, courseKey: CourseKey) {
     // Atomic-ish claim: only update if still waiting and unclaimed.
     const questionIds = candidate.question_ids && Array.isArray(candidate.question_ids) && candidate.question_ids.length > 0
       ? candidate.question_ids
-      : await pickQuestionIds(courseKey);
+      : await pickQuestionIds(courseKey, candidate.id);
     if (questionIds.length === 0) {
       // No questions available; cancel and abort.
       await supabaseAdmin
