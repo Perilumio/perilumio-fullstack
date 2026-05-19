@@ -27,7 +27,7 @@ export function sortCourses<T extends { key: CourseKey; label: string }>(courses
 
 export const COURSES: ReadonlyArray<Course> = sortCourses(COURSE_DEFINITIONS);
 
-export const DEFAULT_COURSE_KEY: CourseKey = 'strassenbau';
+export const DEFAULT_COURSE_KEY: CourseKey = 'abu';
 const KEYS = new Set(COURSES.map((c) => c.key));
 
 export function isValidCourseKey(key: unknown): key is CourseKey {

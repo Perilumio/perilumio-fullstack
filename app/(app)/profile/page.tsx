@@ -36,16 +36,17 @@ export default async function ProfilePage() {
     const { data: inserted } = await supabase
       .from('profiles')
       .upsert(
-        { id: user.id, display_name: username, username, avatar_key: DEFAULT_AVATAR_KEY },
+        { id: user.id, display_name: username, username, avatar_key: DEFAULT_AVATAR_KEY, active_course_key: DEFAULT_COURSE_KEY },
         { onConflict: 'id' },
       )
       .select('*')
       .maybeSingle();
     profile = inserted ?? null;
-  } else if (!profile.username || !profile.avatar_key) {
+  } else if (!profile.username || !profile.avatar_key || !profile.active_course_key) {
     const patch: Record<string, string> = {};
     if (!profile.username) patch.username = deriveUsername(user);
     if (!profile.avatar_key) patch.avatar_key = DEFAULT_AVATAR_KEY;
+    if (!profile.active_course_key) patch.active_course_key = DEFAULT_COURSE_KEY;
     const { data: updated } = await supabase
       .from('profiles')
       .update(patch)
