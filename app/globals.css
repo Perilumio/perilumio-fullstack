@@ -6,7 +6,7 @@
 .avatar-option:hover{border-color:rgba(55,184,255,.55);box-shadow:0 0 18px rgba(55,184,255,.18)}
 .avatar-option:focus-visible{outline:none;border-color:rgba(55,184,255,.7);box-shadow:0 0 0 2px rgba(55,184,255,.35)}
 .avatar-option.is-selected{border-color:rgba(55,184,255,.85);box-shadow:0 0 0 2px rgba(55,184,255,.45),0 0 22px rgba(55,184,255,.35)}
-.avatar-option img{width:100%;height:auto;aspect-ratio:240/216;object-fit:contain;object-position:center;border-radius:12px;display:block;background:linear-gradient(180deg,rgba(16,25,45,.96),rgba(12,18,34,.96))}
+.avatar-option img{width:100%;height:auto;aspect-ratio:240/216;object-fit:contain;object-position:center;display:block}
 .avatar-option-label{font-size:12px;color:var(--muted)}
 .avatar-option.is-selected .avatar-option-label{color:var(--blue2);font-weight:700}
 .lb-row{display:flex;align-items:center;gap:12px}
