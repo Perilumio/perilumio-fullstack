@@ -79,26 +79,35 @@ function LoginInner() {
           setError('Passwörter stimmen nicht überein.');
           return;
         }
-        const { data, error } = await supabase.auth.signUp({
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.trim(), password }),
+        });
+        const payload = (await res.json().catch(() => ({}))) as {
+          ok?: boolean;
+          message?: string;
+          code?: string;
+        };
+        if (!res.ok || !payload.ok) {
+          setStatus('error');
+          setError(payload.message ?? 'Registrierung fehlgeschlagen.');
+          return;
+        }
+        const { error: signInError } = await supabase.auth.signInWithPassword({
           email: email.trim(),
           password,
-          options: { emailRedirectTo: `${origin}/auth/callback` },
         });
-        if (error) {
-          setStatus('error');
-          setError(translateError(error.message));
+        if (signInError) {
+          setStatus('sent');
+          setMessage(
+            'Konto erstellt. Bitte jetzt mit E-Mail und Passwort einloggen.'
+          );
           return;
         }
-        if (data.session) {
-          setStatus('idle');
-          router.push('/profile');
-          router.refresh();
-          return;
-        }
-        setStatus('sent');
-        setMessage(
-          'Konto erstellt. Bitte E-Mail-Postfach (auch Spam) prüfen und den Bestätigungslink öffnen.'
-        );
+        setStatus('idle');
+        router.push('/profile');
+        router.refresh();
         return;
       }
 
@@ -113,7 +122,7 @@ function LoginInner() {
         }
         setStatus('sent');
         setMessage(
-          'Wenn ein Konto mit dieser E-Mail existiert, wurde ein Link zum Zurücksetzen gesendet. Bitte Postfach (auch Spam) prüfen.'
+          'Wenn ein Konto mit dieser E-Mail existiert, wurde ein Link zum Zurücksetzen gesendet. Bitte Postfach (auch Spam) prüfen. Falls keine Mail ankommt, bitte 1-2 Minuten warten, bevor du es erneut versuchst.'
         );
         return;
       }
@@ -277,10 +286,16 @@ function translateError(msg: string): string {
   const lower = msg.toLowerCase();
   if (lower.includes('invalid login credentials')) return 'E-Mail oder Passwort ist falsch.';
   if (lower.includes('email not confirmed')) return 'E-Mail-Adresse wurde noch nicht bestätigt.';
-  if (lower.includes('user already registered')) return 'Konto mit dieser E-Mail existiert bereits.';
+  if (lower.includes('user already registered'))
+    return 'Für diese E-Mail existiert bereits ein Konto. Bitte einloggen oder Passwort zurücksetzen.';
   if (lower.includes('password should be at least'))
     return `Passwort ist zu kurz (mindestens ${MIN_PASSWORD_LENGTH} Zeichen).`;
-  if (lower.includes('rate limit')) return 'Zu viele Versuche. Bitte später erneut probieren.';
+  if (
+    lower.includes('rate limit') ||
+    lower.includes('too many') ||
+    lower.includes('email rate limit')
+  )
+    return 'Aktuell wurde zu oft eine E-Mail angefordert. Bitte 1-2 Minuten warten und dann erneut versuchen.';
   return msg;
 }
 
