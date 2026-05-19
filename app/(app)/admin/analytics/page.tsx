@@ -1,36 +1,11 @@
 import { AppShell, Lumio } from '@/components/AppShell';
 import { AdminGate } from '@/components/AdminGate';
 import { requireAdmin } from '@/lib/auth';
-import { createClient } from '@/lib/supabase/server';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { courseLabel } from '@/lib/courses-constants';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
-
-type UserSummary = {
-  user_id: string;
-  username: string | null;
-  display_name: string | null;
-  role: string | null;
-  xp: number | null;
-  level: number | null;
-  battle_points: number | null;
-  active_course_key: string | null;
-  session_count: number;
-  total_seconds: number;
-  avg_seconds: number;
-  total_page_views: number;
-  last_seen_at: string | null;
-};
-
-type CourseProgress = {
-  user_id: string;
-  course_key: string;
-  lessons_started: number;
-  lessons_passed: number;
-  avg_best_score: number | null;
-  last_progress_at: string | null;
-};
 
 type LessonProgressRow = {
   user_id: string;
@@ -41,28 +16,10 @@ type LessonProgressRow = {
   updated_at: string;
 };
 
-type LessonRow = {
-  id: string;
-  title: string;
-  module_id: string;
-  pass_score: number;
-};
-
-type ModuleRow = {
-  id: string;
-  title: string;
-  course_key: string | null;
-};
-
-function formatDuration(totalSeconds: number): string {
-  const s = Math.max(0, Math.round(totalSeconds));
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  if (h > 0) return `${h}h ${m}m`;
-  if (m > 0) return `${m}m ${sec}s`;
-  return `${sec}s`;
-}
+type LessonRow = { id: string; title: string; module_id: string; pass_score: number };
+type ModuleRow = { id: string; title: string; course_key: string | null };
+type ProfileRow = { id: string; username: string | null; display_name: string | null };
+type QuestionRow = { lesson_id: string };
 
 function formatRelative(iso: string | null): string {
   if (!iso) return '—';
@@ -78,67 +35,102 @@ function formatRelative(iso: string | null): string {
   return `vor ${d}d`;
 }
 
-function daysSince(iso: string | null): number | null {
-  if (!iso) return null;
-  const ts = new Date(iso).getTime();
-  if (!Number.isFinite(ts)) return null;
-  return Math.floor((Date.now() - ts) / 86_400_000);
-}
-
 export default async function AnalyticsPage() {
   const access = await requireAdmin();
   if (!access.ok) {
     return <AppShell><section className="stack"><AdminGate /></section></AppShell>;
   }
 
-  const supabase = await createClient();
-
-  const [summaryRes, courseProgressRes, lessonProgressRes, lessonsRes, modulesRes] = await Promise.all([
-    supabase.from('analytics_user_summary').select('*'),
-    supabase.from('analytics_user_course_progress').select('*'),
-    supabase.from('lesson_progress').select('user_id,lesson_id,best_score,passed,last_question_index,updated_at'),
-    supabase.from('lessons').select('id,title,module_id,pass_score'),
-    supabase.from('modules').select('id,title,course_key'),
+  const [progressRes, lessonsRes, modulesRes, profilesRes, questionsRes] = await Promise.all([
+    supabaseAdmin.from('lesson_progress').select('user_id,lesson_id,best_score,passed,last_question_index,updated_at'),
+    supabaseAdmin.from('lessons').select('id,title,module_id,pass_score'),
+    supabaseAdmin.from('modules').select('id,title,course_key'),
+    supabaseAdmin.from('profiles').select('id,username,display_name'),
+    supabaseAdmin.from('questions').select('lesson_id'),
   ]);
 
-  const summary = ((summaryRes.data ?? []) as UserSummary[]).slice().sort((a, b) => {
-    const at = a.last_seen_at ? new Date(a.last_seen_at).getTime() : 0;
-    const bt = b.last_seen_at ? new Date(b.last_seen_at).getTime() : 0;
-    return bt - at;
-  });
-  const courseProgress = (courseProgressRes.data ?? []) as CourseProgress[];
-  const lessonProgress = (lessonProgressRes.data ?? []) as LessonProgressRow[];
+  const progress = (progressRes.data ?? []) as LessonProgressRow[];
   const lessons = (lessonsRes.data ?? []) as LessonRow[];
   const modules = (modulesRes.data ?? []) as ModuleRow[];
+  const profiles = (profilesRes.data ?? []) as ProfileRow[];
+  const questions = (questionsRes.data ?? []) as QuestionRow[];
 
-  const moduleById = new Map(modules.map((m) => [m.id, m]));
   const lessonById = new Map(lessons.map((l) => [l.id, l]));
+  const moduleById = new Map(modules.map((m) => [m.id, m]));
+  const profileById = new Map(profiles.map((p) => [p.id, p]));
 
-  const courseProgressByUser = new Map<string, CourseProgress[]>();
-  for (const cp of courseProgress) {
-    const list = courseProgressByUser.get(cp.user_id) ?? [];
-    list.push(cp);
-    courseProgressByUser.set(cp.user_id, list);
+  const totalQuestionsByLesson = new Map<string, number>();
+  for (const q of questions) {
+    totalQuestionsByLesson.set(q.lesson_id, (totalQuestionsByLesson.get(q.lesson_id) ?? 0) + 1);
   }
 
-  const lessonProgressByUser = new Map<string, LessonProgressRow[]>();
-  for (const lp of lessonProgress) {
-    const list = lessonProgressByUser.get(lp.user_id) ?? [];
-    list.push(lp);
-    lessonProgressByUser.set(lp.user_id, list);
-  }
+  type DropOff = {
+    user_id: string;
+    user_label: string;
+    course_key: string | null;
+    course_label: string;
+    lesson_id: string;
+    lesson_title: string;
+    last_question_index: number;
+    total_questions: number;
+    percent: number;
+    best_score: number;
+    updated_at: string;
+  };
 
-  const totalUsers = summary.length;
-  const activeUsers7d = summary.filter((u) => {
-    const d = daysSince(u.last_seen_at);
-    return d !== null && d <= 7;
-  }).length;
-  const inactiveUsers = summary.filter((u) => {
-    const d = daysSince(u.last_seen_at);
-    return d === null || d > 7;
-  }).length;
-  const totalSessionTime = summary.reduce((acc, u) => acc + (u.total_seconds || 0), 0);
-  const totalSessions = summary.reduce((acc, u) => acc + (u.session_count || 0), 0);
+  const dropOffs: DropOff[] = [];
+  for (const p of progress) {
+    if (p.passed) continue;
+    if (!p.last_question_index || p.last_question_index <= 0) continue;
+    const lesson = lessonById.get(p.lesson_id);
+    if (!lesson) continue;
+    const mod = moduleById.get(lesson.module_id);
+    const profile = profileById.get(p.user_id);
+    const total = totalQuestionsByLesson.get(p.lesson_id) ?? 0;
+    const answered = Math.min(p.last_question_index, total || p.last_question_index);
+    const percent = total > 0 ? Math.round((answered / total) * 100) : 0;
+    dropOffs.push({
+      user_id: p.user_id,
+      user_label: profile?.username ?? profile?.display_name ?? p.user_id.slice(0, 8),
+      course_key: mod?.course_key ?? null,
+      course_label: mod?.course_key ? courseLabel(mod.course_key) : '—',
+      lesson_id: p.lesson_id,
+      lesson_title: lesson.title,
+      last_question_index: p.last_question_index,
+      total_questions: total,
+      percent,
+      best_score: p.best_score,
+      updated_at: p.updated_at,
+    });
+  }
+  dropOffs.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+
+  type LessonAgg = {
+    lesson_id: string;
+    lesson_title: string;
+    course_label: string;
+    drop_offs: number;
+    avg_percent: number;
+    last_progress_at: string;
+  };
+  const lessonAggMap = new Map<string, { sumPercent: number; count: number; lastTs: number; title: string; courseLabel: string }>();
+  for (const d of dropOffs) {
+    const entry = lessonAggMap.get(d.lesson_id) ?? { sumPercent: 0, count: 0, lastTs: 0, title: d.lesson_title, courseLabel: d.course_label };
+    entry.sumPercent += d.percent;
+    entry.count += 1;
+    const ts = new Date(d.updated_at).getTime();
+    if (ts > entry.lastTs) entry.lastTs = ts;
+    lessonAggMap.set(d.lesson_id, entry);
+  }
+  const lessonAgg: LessonAgg[] = Array.from(lessonAggMap.entries()).map(([lesson_id, v]) => ({
+    lesson_id,
+    lesson_title: v.title,
+    course_label: v.courseLabel,
+    drop_offs: v.count,
+    avg_percent: v.count > 0 ? Math.round(v.sumPercent / v.count) : 0,
+    last_progress_at: new Date(v.lastTs).toISOString(),
+  }));
+  lessonAgg.sort((a, b) => b.drop_offs - a.drop_offs);
 
   return (
     <AppShell>
@@ -146,111 +138,33 @@ export default async function AnalyticsPage() {
         <div className="card hero">
           <div>
             <span className="pill">Admin · Analytics</span>
-            <h1>Nutzeraktivität & Lernfortschritt</h1>
-            <p className="muted">Sitzungen, Verweildauer und Fortschritt pro Kurs/Lektion. Nur für Admins sichtbar.</p>
+            <h1>Abbruchstellen & Export</h1>
+            <p className="muted">Lektionen, die begonnen aber nicht bestanden wurden. Nur für Admins sichtbar.</p>
           </div>
           <Lumio />
         </div>
 
-        <div className="grid stats-grid">
-          <div className="card stat-card"><div className="muted">Nutzer gesamt</div><div className="kpi">{totalUsers}</div></div>
-          <div className="card stat-card"><div className="muted">Aktiv (7T)</div><div className="kpi">{activeUsers7d}</div></div>
-          <div className="card stat-card"><div className="muted">Inaktiv (&gt;7T)</div><div className="kpi">{inactiveUsers}</div></div>
-          <div className="card stat-card"><div className="muted">Sitzungen</div><div className="kpi">{totalSessions}</div></div>
-          <div className="card stat-card"><div className="muted">Gesamtzeit</div><div className="kpi">{formatDuration(totalSessionTime)}</div></div>
-        </div>
-
         <div className="card stack">
-          <h2 style={{ margin: 0 }}>Nutzerübersicht</h2>
-          <p className="muted" style={{ margin: 0 }}>Sortiert nach letzter Aktivität.</p>
-          <div style={{ overflowX: 'auto' }}>
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Nutzer</th>
-                  <th>Aktiver Kurs</th>
-                  <th>Letzte Aktivität</th>
-                  <th>Besuche</th>
-                  <th>Gesamtzeit</th>
-                  <th>Ø Sitzung</th>
-                  <th>Lektionen ✓</th>
-                  <th>XP / BP</th>
-                </tr>
-              </thead>
-              <tbody>
-                {summary.map((u) => {
-                  const userProgress = lessonProgressByUser.get(u.user_id) ?? [];
-                  const passedCount = userProgress.filter((p) => p.passed).length;
-                  return (
-                    <tr key={u.user_id}>
-                      <td>
-                        <div style={{ fontWeight: 700 }}>{u.username ?? u.display_name ?? u.user_id.slice(0, 8)}</div>
-                        <div className="muted" style={{ fontSize: 12 }}>{u.role ?? 'student'}</div>
-                      </td>
-                      <td>{u.active_course_key ? courseLabel(u.active_course_key) : '—'}</td>
-                      <td>{formatRelative(u.last_seen_at)}</td>
-                      <td>{u.session_count}</td>
-                      <td>{formatDuration(u.total_seconds)}</td>
-                      <td>{formatDuration(u.avg_seconds)}</td>
-                      <td>{passedCount}/{userProgress.length}</td>
-                      <td>{u.xp ?? 0} / {u.battle_points ?? 0}</td>
-                    </tr>
-                  );
-                })}
-                {summary.length === 0 && (
-                  <tr><td colSpan={8} className="muted">Noch keine Daten.</td></tr>
-                )}
-              </tbody>
-            </table>
+          <h2 style={{ margin: 0 }}>Export</h2>
+          <p className="muted" style={{ margin: 0 }}>CSV-Downloads mit deutschen Spaltennamen, UTF-8.</p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            <a className="btn btn-primary" href="/api/admin/analytics/export?type=dropoffs" download>
+              Abbruchstellen exportieren
+            </a>
+            <a className="btn" href="/api/admin/analytics/export?type=users" download>
+              Nutzerübersicht exportieren
+            </a>
+            <a className="btn" href="/api/admin/analytics/export?type=progress" download>
+              Lernfortschritt exportieren
+            </a>
           </div>
         </div>
 
         <div className="card stack">
-          <h2 style={{ margin: 0 }}>Fortschritt pro Nutzer & Kurs</h2>
-          <p className="muted" style={{ margin: 0 }}>Aggregiert aus <code>lesson_progress</code>.</p>
-          <div style={{ overflowX: 'auto' }}>
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Nutzer</th>
-                  <th>Kurs</th>
-                  <th>Gestartet</th>
-                  <th>Bestanden</th>
-                  <th>Ø Score</th>
-                  <th>Letzter Fortschritt</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(() => {
-                  const rows: React.ReactElement[] = [];
-                  for (const u of summary) {
-                    const userRows = courseProgressByUser.get(u.user_id) ?? [];
-                    for (const cp of userRows) {
-                      rows.push(
-                        <tr key={`${u.user_id}-${cp.course_key}`}>
-                          <td>{u.username ?? u.display_name ?? u.user_id.slice(0, 8)}</td>
-                          <td>{courseLabel(cp.course_key)}</td>
-                          <td>{cp.lessons_started}</td>
-                          <td>{cp.lessons_passed}</td>
-                          <td>{cp.avg_best_score ?? 0}</td>
-                          <td>{formatRelative(cp.last_progress_at)}</td>
-                        </tr>
-                      );
-                    }
-                  }
-                  if (rows.length === 0) {
-                    return <tr><td colSpan={6} className="muted">Noch keine Fortschrittsdaten.</td></tr>;
-                  }
-                  return rows;
-                })()}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div className="card stack">
-          <h2 style={{ margin: 0 }}>Schwache Lektionen</h2>
-          <p className="muted" style={{ margin: 0 }}>Lektionen mit <code>best_score</code> &lt; <code>pass_score</code> und noch nicht bestanden.</p>
+          <h2 style={{ margin: 0 }}>Abbruchstellen</h2>
+          <p className="muted" style={{ margin: 0 }}>
+            Lektion begonnen (mind. eine Frage beantwortet), aber noch nicht bestanden. Insgesamt {dropOffs.length}.
+          </p>
           <div style={{ overflowX: 'auto' }}>
             <table className="table">
               <thead>
@@ -258,78 +172,62 @@ export default async function AnalyticsPage() {
                   <th>Nutzer</th>
                   <th>Kurs</th>
                   <th>Lektion</th>
+                  <th>Letzte Frage / Total</th>
+                  <th>Fortschritt</th>
                   <th>Best Score</th>
-                  <th>Pass Score</th>
-                  <th>Letzter Versuch</th>
+                  <th>Letzter Fortschritt</th>
                 </tr>
               </thead>
               <tbody>
-                {(() => {
-                  const summaryById = new Map(summary.map((u) => [u.user_id, u]));
-                  const weak = lessonProgress.filter((lp) => {
-                    const lesson = lessonById.get(lp.lesson_id);
-                    if (!lesson) return false;
-                    return !lp.passed && lp.best_score < lesson.pass_score;
-                  });
-                  weak.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-                  const top = weak.slice(0, 50);
-                  if (top.length === 0) {
-                    return <tr><td colSpan={6} className="muted">Keine schwachen Lektionen.</td></tr>;
-                  }
-                  return top.map((lp) => {
-                    const lesson = lessonById.get(lp.lesson_id);
-                    const mod = lesson ? moduleById.get(lesson.module_id) : null;
-                    const u = summaryById.get(lp.user_id);
-                    return (
-                      <tr key={`${lp.user_id}-${lp.lesson_id}`}>
-                        <td>{u?.username ?? u?.display_name ?? lp.user_id.slice(0, 8)}</td>
-                        <td>{mod?.course_key ? courseLabel(mod.course_key) : '—'}</td>
-                        <td>{lesson?.title ?? lp.lesson_id.slice(0, 8)}</td>
-                        <td>{lp.best_score}</td>
-                        <td>{lesson?.pass_score ?? 70}</td>
-                        <td>{formatRelative(lp.updated_at)}</td>
-                      </tr>
-                    );
-                  });
-                })()}
+                {dropOffs.length === 0 && (
+                  <tr><td colSpan={7} className="muted">Keine Abbruchstellen erkannt.</td></tr>
+                )}
+                {dropOffs.slice(0, 200).map((d) => (
+                  <tr key={`${d.user_id}-${d.lesson_id}`}>
+                    <td>{d.user_label}</td>
+                    <td>{d.course_label}</td>
+                    <td>{d.lesson_title}</td>
+                    <td>{d.last_question_index} / {d.total_questions || '?'}</td>
+                    <td>{d.percent}%</td>
+                    <td>{d.best_score}</td>
+                    <td>{formatRelative(d.updated_at)}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
+          {dropOffs.length > 200 && (
+            <p className="muted" style={{ margin: 0 }}>Zeige Top 200 nach letztem Fortschritt. Vollständige Liste via CSV-Export.</p>
+          )}
         </div>
 
         <div className="card stack">
-          <h2 style={{ margin: 0 }}>Inaktive Nutzer (&gt; 7 Tage)</h2>
+          <h2 style={{ margin: 0 }}>Top-Lektionen mit Abbrüchen</h2>
+          <p className="muted" style={{ margin: 0 }}>Aggregiert nach Anzahl offener Fortschritte je Lektion.</p>
           <div style={{ overflowX: 'auto' }}>
             <table className="table">
               <thead>
                 <tr>
-                  <th>Nutzer</th>
-                  <th>Letzte Aktivität</th>
-                  <th>Aktiver Kurs</th>
-                  <th>Lektionen ✓</th>
+                  <th>Kurs</th>
+                  <th>Lektion</th>
+                  <th>Abbrüche</th>
+                  <th>Ø Fortschritt</th>
+                  <th>Letzter Fortschritt</th>
                 </tr>
               </thead>
               <tbody>
-                {summary
-                  .filter((u) => {
-                    const d = daysSince(u.last_seen_at);
-                    return d === null || d > 7;
-                  })
-                  .map((u) => {
-                    const userProgress = lessonProgressByUser.get(u.user_id) ?? [];
-                    const passedCount = userProgress.filter((p) => p.passed).length;
-                    return (
-                      <tr key={u.user_id}>
-                        <td>{u.username ?? u.display_name ?? u.user_id.slice(0, 8)}</td>
-                        <td>{u.last_seen_at ? formatRelative(u.last_seen_at) : 'nie'}</td>
-                        <td>{u.active_course_key ? courseLabel(u.active_course_key) : '—'}</td>
-                        <td>{passedCount}/{userProgress.length}</td>
-                      </tr>
-                    );
-                  })}
-                {inactiveUsers === 0 && (
-                  <tr><td colSpan={4} className="muted">Alle Nutzer waren in den letzten 7 Tagen aktiv.</td></tr>
+                {lessonAgg.length === 0 && (
+                  <tr><td colSpan={5} className="muted">Keine Daten.</td></tr>
                 )}
+                {lessonAgg.slice(0, 50).map((l) => (
+                  <tr key={l.lesson_id}>
+                    <td>{l.course_label}</td>
+                    <td>{l.lesson_title}</td>
+                    <td>{l.drop_offs}</td>
+                    <td>{l.avg_percent}%</td>
+                    <td>{formatRelative(l.last_progress_at)}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

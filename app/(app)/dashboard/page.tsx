@@ -78,6 +78,13 @@ export default async function DashboardPage() {
             </Link>
           ))}
         </nav>
+        {profile?.role === 'admin' && (
+          <p className="muted" style={{ textAlign: 'center', fontSize: 12, marginTop: 8 }} data-testid="dashboard-admin-link">
+            <Link href="/admin">Admin</Link>
+            {' · '}
+            <Link href="/admin/analytics">Analytics</Link>
+          </p>
+        )}
       </section>
     </AppShell>
   );
