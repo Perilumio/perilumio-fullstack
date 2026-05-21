@@ -18,6 +18,11 @@ create policy "progress-own-read" on public.lesson_progress for select using (au
 create policy "progress-own-write" on public.lesson_progress for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "attempts-own-read" on public.lesson_attempts for select using (auth.uid() = user_id);
 create policy "attempts-own-write" on public.lesson_attempts for insert with check (auth.uid() = user_id);
+-- NOTE: handle_new_user() is intentionally defined here only to satisfy the
+-- on_auth_user_created trigger when seeding from schema.sql. The canonical,
+-- column-correct definition is in supabase/migrations/20260535_fix_handle_new_user_profile_columns.sql
+-- and is what production runs. Keep them in sync: profiles has no `email`
+-- column, so never insert into one here.
 create or replace function public.handle_new_user() returns trigger language plpgsql security definer set search_path = public as $$ begin insert into public.profiles (id, display_name) values (new.id, coalesce(new.raw_user_meta_data->>'display_name', 'Lehrling')) on conflict (id) do nothing; return new; end; $$;
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created after insert on auth.users for each row execute procedure public.handle_new_user();
