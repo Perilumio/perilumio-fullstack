@@ -84,7 +84,6 @@ export default async function AdminAccountsPage() {
     .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
 
   const currentUserId = access.user!.id;
-  const mailConfigured = Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
 
   return (
     <AppShell>
@@ -94,8 +93,7 @@ export default async function AdminAccountsPage() {
             <span className="pill">Admin</span>
             <h1>Konten-Übersicht</h1>
             <p className="muted">
-              {rows.length} Konten · Löschungen sind <strong>unwiderruflich</strong> und benachrichtigen
-              die Empfängeradresse per E-Mail.
+              {rows.length} Konten · Löschungen sind <strong>unwiderruflich</strong>.
             </p>
           </div>
           <Lumio />
@@ -103,15 +101,6 @@ export default async function AdminAccountsPage() {
         <div>
           <Link href="/admin" className="btn">← Zurück zum Admin</Link>
         </div>
-        {!mailConfigured && (
-          <div className="card" style={{ borderColor: 'rgba(255,92,122,.45)' }}>
-            <strong style={{ color: '#ff8fa5' }}>Achtung:</strong>{' '}
-            <span className="muted">
-              <code>RESEND_API_KEY</code> und/oder <code>EMAIL_FROM</code> sind nicht gesetzt.
-              Löschungen werden serverseitig blockiert, bis der Mailversand funktioniert.
-            </span>
-          </div>
-        )}
         <AdminAccountsTable rows={rows} currentUserId={currentUserId} />
       </section>
     </AppShell>

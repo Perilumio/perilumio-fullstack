@@ -78,14 +78,18 @@ export function AdminAccountsTable({
       const data = (await res.json().catch(() => ({}))) as {
         ok?: boolean;
         message?: string;
-        notified_email?: string;
+        deleted_email?: string | null;
       };
       if (!res.ok || !data.ok) {
         setError(data.message || `Fehler (${res.status}).`);
         setBusy(false);
         return;
       }
-      setNotice(`Konto gelöscht. Benachrichtigung an ${data.notified_email} versendet.`);
+      setNotice(
+        data.deleted_email
+          ? `Konto ${data.deleted_email} gelöscht.`
+          : 'Konto gelöscht.'
+      );
       setTarget(null);
       setConfirmText('');
       setBusy(false);
@@ -206,9 +210,6 @@ export function AdminAccountsTable({
               <strong>{target.email ?? target.id}</strong>
               {target.username ? ` (${target.username})` : ''} wird aus Supabase Auth entfernt.
               Profil, Lernfortschritt, Battle-Punkte und Battle-Antworten werden über die Datenbank-Kaskade gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.
-            </p>
-            <p className="muted" style={{ margin: 0 }}>
-              Die betroffene Person erhält vor der Löschung eine E-Mail-Benachrichtigung an ihre hinterlegte Adresse.
             </p>
             <label className="stack" style={{ gap: 6 }}>
               <span className="muted">Tippe <code>DELETE</code> zur Bestätigung:</span>
