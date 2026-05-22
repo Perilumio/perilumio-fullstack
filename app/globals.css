@@ -128,4 +128,7 @@
 @keyframes fxRing2{0%{transform:scale(.4);opacity:0;border-width:2px}30%{opacity:.95}100%{transform:scale(22);opacity:0;border-width:1px}}
 @keyframes fxGlow{0%{opacity:0}20%{opacity:1}100%{opacity:0}}
 @keyframes fxFlash{0%{opacity:0}14%{opacity:1}70%{opacity:.85}100%{opacity:0}}
+.pill-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px rgba(37,208,127,.7);animation:pill-dot-pulse 2.4s ease-in-out infinite}
+@keyframes pill-dot-pulse{0%,100%{opacity:.55;box-shadow:0 0 6px rgba(37,208,127,.45)}50%{opacity:1;box-shadow:0 0 12px rgba(37,208,127,.85)}}
+@media (prefers-reduced-motion:reduce){.pill-dot{animation:none;opacity:.9}}
 @media (prefers-reduced-motion:reduce){.answer-fx{animation:none!important}.answer-fx-correct .answer-fx-spark,.answer-fx-correct .answer-fx-spark-ring,.answer-fx-correct .answer-fx-spark-trail,.answer-fx-correct .answer-fx-core,.answer-fx-correct .answer-fx-ring,.answer-fx-correct .answer-fx-ring-2,.answer-fx-correct .answer-fx-glow{animation-duration:240ms!important;animation-timing-function:linear!important}.answer-fx-wrong .answer-fx-flash,.answer-fx-wrong .answer-fx-vignette{animation-duration:280ms!important;animation-timing-function:linear!important}}

@@ -54,7 +54,7 @@ export default async function DashboardPage() {
       <section className="stack dash-stack" data-testid="dashboard">
         <div className="card hero">
           <div>
-            <span className="pill">● Live MVP</span>
+            <span className="pill"><span className="pill-dot" aria-hidden="true" />Live</span>
             <h1>Willkommen zurück, {greetingName}.</h1>
             <p className="muted">
               Aktiver Kurs:{' '}
