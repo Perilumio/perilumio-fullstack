@@ -41,6 +41,55 @@ function pickInitialLessonIndex(lessons: Lesson[], progress: Progress[]): number
   return firstUnfinished === -1 ? 0 : firstUnfinished;
 }
 
+// Trailing " · N/M" marker that the ABU sublesson data carries in lessons.title.
+// We strip it for display so the overview can group sublessons under their base
+// lesson and present a single row with a progress badge instead of five rows.
+const SUBLESSON_TITLE_SUFFIX = /\s·\s\d+\/\d+\s*$/;
+
+function baseLessonTitle(lesson: Lesson): string {
+  if (lesson.sublesson_index && lesson.sublesson_total) {
+    return lesson.title.replace(SUBLESSON_TITLE_SUFFIX, '').trim();
+  }
+  return lesson.title;
+}
+
+type LessonGroup = {
+  key: string;
+  baseTitle: string;
+  // Sublesson rows ordered by sublesson_index (1..N). For non-sublesson lessons
+  // the group holds a single entry and behaves like the legacy flat list.
+  items: { lesson: Lesson; index: number }[];
+  isSublesson: boolean;
+};
+
+function groupLessons(lessons: Lesson[]): LessonGroup[] {
+  const groups: LessonGroup[] = [];
+  const byKey = new Map<string, LessonGroup>();
+  lessons.forEach((lesson, index) => {
+    const isSub = Boolean(lesson.sublesson_index && lesson.sublesson_total);
+    const base = baseLessonTitle(lesson);
+    // Sublesson rows in the same base lesson share a module via the seed
+    // migration, but we key purely on the cleaned title so that sibling
+    // sublessons collapse into one card regardless of their UUIDs.
+    const key = isSub ? `sub::${base}` : `solo::${lesson.id}`;
+    let group = byKey.get(key);
+    if (!group) {
+      group = { key, baseTitle: base, items: [], isSublesson: isSub };
+      byKey.set(key, group);
+      groups.push(group);
+    }
+    group.items.push({ lesson, index });
+  });
+  for (const group of groups) {
+    if (group.isSublesson) {
+      group.items.sort(
+        (a, b) => (a.lesson.sublesson_index ?? 0) - (b.lesson.sublesson_index ?? 0),
+      );
+    }
+  }
+  return groups;
+}
+
 // 32-bit FNV-1a hash of an arbitrary string. Deterministic, cheap, and good
 // enough as a seed source for the question shuffle.
 function hashStringToSeed(input: string): number {
@@ -241,6 +290,20 @@ export function LearnClient({
         nextSet.add(lesson.id);
         return nextSet;
       });
+      // For ABU sublessons we want the overview to flip from "1/5" to "2/5"
+      // immediately after a passing run, so we advance the current lesson
+      // pointer to the next sublesson in the same base lesson when one exists.
+      if (lesson.sublesson_index && lesson.sublesson_total) {
+        const nextSublessonIdx = lessons.findIndex(
+          (l, i) =>
+            i > lessonIndex &&
+            baseLessonTitle(l) === baseLessonTitle(lesson) &&
+            l.id !== lesson.id,
+        );
+        if (nextSublessonIdx !== -1) {
+          setLessonIndex(nextSublessonIdx);
+        }
+      }
     }
     resetLessonState();
     setView('overview');
@@ -265,8 +328,25 @@ export function LearnClient({
 
   const lessonCompleted = lesson ? completedLessons.has(lesson.id) : false;
 
-  const totalLessons = lessons.length;
-  const doneCount = lessons.filter((l) => completedLessons.has(l.id) || progressMap.get(l.id)?.passed).length;
+  const lessonGroups = useMemo(() => groupLessons(lessons), [lessons]);
+
+  function isLessonPassed(id: string): boolean {
+    return completedLessons.has(id) || Boolean(progressMap.get(id)?.passed);
+  }
+
+  // For sublesson groups, the "active" item is the first non-passed sublesson
+  // (i.e. what x/5 should point at). When every sublesson is passed we keep the
+  // last entry around so the card can still be repeated, but the group is
+  // flagged as completed and the badge collapses to a ✓.
+  function activeGroupItem(group: LessonGroup): { lesson: Lesson; index: number; allDone: boolean } {
+    const firstOpen = group.items.find((it) => !isLessonPassed(it.lesson.id));
+    if (firstOpen) return { ...firstOpen, allDone: false };
+    const last = group.items[group.items.length - 1];
+    return { ...last, allDone: true };
+  }
+
+  const totalLessons = lessonGroups.length;
+  const doneCount = lessonGroups.filter((g) => g.items.every((it) => isLessonPassed(it.lesson.id))).length;
 
   function startOrResume() {
     setMessage('');
@@ -297,15 +377,19 @@ export function LearnClient({
           <div className="card stack" data-testid="learn-current-lesson-card">
             <div>
               <div className="pill">Aktuelle Lektion</div>
-              <h3 style={{ margin: '8px 0 4px' }}>{lesson.title}</h3>
+              <h3 style={{ margin: '8px 0 4px' }}>{baseLessonTitle(lesson)}</h3>
               <p className="muted" style={{ margin: 0 }}>
                 {(() => {
                   const p = progressMap.get(lesson.id);
                   const total = lessonQuestions.length;
-                  if (lessonCompleted) return `Bestanden — Wiederholung möglich (${total} Fragen)`;
+                  const subInfo =
+                    lesson.sublesson_index && lesson.sublesson_total
+                      ? `Unterlektion ${lesson.sublesson_index}/${lesson.sublesson_total} · `
+                      : '';
+                  if (lessonCompleted) return `${subInfo}Bestanden — Wiederholung möglich (${total} Fragen)`;
                   const at = (p?.last_question_index ?? 0);
-                  if (at > 0 && at < total) return `Fortsetzen bei Frage ${at + 1} von ${total}`;
-                  return `${total} Fragen · Bestehensgrenze ${lesson.pass_score}%`;
+                  if (at > 0 && at < total) return `${subInfo}Fortsetzen bei Frage ${at + 1} von ${total}`;
+                  return `${subInfo}${total} Fragen · Bestehensgrenze ${lesson.pass_score}%`;
                 })()}
               </p>
             </div>
@@ -334,37 +418,42 @@ export function LearnClient({
         <div>
           <h3 style={{ margin: '4px 0 8px' }}>Alle Lektionen</h3>
           <div className="learn-overview-lessons" data-testid="learn-lessons-list">
-            {lessons.map((item, index) => {
-              const p = progressMap.get(item.id);
-              const done = completedLessons.has(item.id) || Boolean(p?.passed);
-              const inProgress = !done && (p?.last_question_index ?? 0) > 0;
-              const status = done ? '✓ bestanden' : inProgress ? '… läuft' : 'neu';
-              const subBadge =
-                item.sublesson_index && item.sublesson_total
-                  ? `${item.sublesson_index}/${item.sublesson_total}`
-                  : null;
+            {lessonGroups.map((group) => {
+              const active = activeGroupItem(group);
+              const activeLesson = active.lesson;
+              const p = progressMap.get(activeLesson.id);
+              const groupDone = active.allDone;
+              const inProgress =
+                !groupDone &&
+                ((p?.last_question_index ?? 0) > 0 ||
+                  (group.isSublesson && group.items.some((it) => isLessonPassed(it.lesson.id))));
+              const statusLabel = groupDone
+                ? '✓ bestanden'
+                : group.isSublesson
+                  ? `${activeLesson.sublesson_index}/${activeLesson.sublesson_total}`
+                  : inProgress
+                    ? '… läuft'
+                    : 'Neu';
               return (
                 <button
-                  key={item.id}
+                  key={group.key}
                   className="lesson-row"
-                  data-testid={`learn-lesson-button-${item.position}`}
-                  data-lesson-status={done ? 'done' : inProgress ? 'in-progress' : 'new'}
-                  data-current={index === lessonIndex ? 'true' : 'false'}
-                  onClick={() => openLesson(index)}
+                  data-testid={`learn-lesson-button-${activeLesson.position}`}
+                  data-lesson-status={groupDone ? 'done' : inProgress ? 'in-progress' : 'new'}
+                  data-current={active.index === lessonIndex ? 'true' : 'false'}
+                  onClick={() => openLesson(active.index)}
                 >
-                  <span className="lesson-title">
-                    {item.title}
-                    {subBadge ? (
-                      <span
-                        className="pill"
-                        data-testid={`learn-sublesson-badge-${item.position}`}
-                        style={{ marginLeft: 8, fontSize: 11, padding: '2px 8px' }}
-                      >
-                        {subBadge}
-                      </span>
-                    ) : null}
+                  <span className="lesson-title">{group.baseTitle}</span>
+                  <span
+                    className="lesson-status"
+                    data-testid={
+                      group.isSublesson
+                        ? `learn-sublesson-progress-${activeLesson.position}`
+                        : undefined
+                    }
+                  >
+                    {statusLabel}
                   </span>
-                  <span className="lesson-status">{status}</span>
                 </button>
               );
             })}
@@ -386,8 +475,13 @@ export function LearnClient({
                 {questionIndex + 1} / {lessonQuestions.length}
               </span>
               <span className="pill" style={{ background: 'rgba(255,255,255,.04)', color: 'var(--muted)', borderColor: 'rgba(76,123,255,.18)' }}>
-                {lesson.title}
+                {baseLessonTitle(lesson)}
               </span>
+              {lesson.sublesson_index && lesson.sublesson_total ? (
+                <span className="pill" data-testid="learn-sublesson-badge">
+                  {lesson.sublesson_index}/{lesson.sublesson_total}
+                </span>
+              ) : null}
               {lessonCompleted ? (
                 <span className="pill" data-testid="learn-lesson-completed-badge">✓ bestanden</span>
               ) : null}
