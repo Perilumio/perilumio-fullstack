@@ -86,10 +86,8 @@ export default async function ProfilePage() {
   for (const ck of lessonCourse.values()) totals[ck] += 1;
 
   const passedByCourse: Record<CourseKey, number> = emptyByCourse();
-  const passedLessonIds = new Set<string>();
   for (const row of (progress ?? []) as any[]) {
     if (!row?.passed) continue;
-    passedLessonIds.add(row.lesson_id as string);
     const ck = lessonCourse.get(row.lesson_id as string);
     if (ck) passedByCourse[ck] += 1;
   }
@@ -101,10 +99,6 @@ export default async function ProfilePage() {
     return { key: c.key, total, passed, percent };
   });
 
-  const totalLessons = COURSES.reduce((sum, c) => sum + totals[c.key], 0);
-  const totalPassed = COURSES.reduce((sum, c) => sum + passedByCourse[c.key], 0);
-  const overallPercent = totalLessons > 0 ? Math.round((totalPassed / totalLessons) * 100) : 0;
-
   const username = profile?.username ?? deriveUsername(user);
   const avatarKey = profile?.avatar_key ?? DEFAULT_AVATAR_KEY;
   const xp = profile?.xp ?? 0;
@@ -112,6 +106,10 @@ export default async function ProfilePage() {
   const activeCourse: CourseKey = isValidCourseKey(profile?.active_course_key)
     ? (profile!.active_course_key as CourseKey)
     : DEFAULT_COURSE_KEY;
+
+  const activeTotal = totals[activeCourse];
+  const activePassed = passedByCourse[activeCourse];
+  const activePercent = activeTotal > 0 ? Math.round((activePassed / activeTotal) * 100) : 0;
 
   return (
     <AppShell>
@@ -154,10 +152,10 @@ export default async function ProfilePage() {
             <div className="muted" style={{ fontSize: 12 }}>aus Quizbattle</div>
           </div>
           <div className="card stat-card">
-            <div className="muted">Gesamtfortschritt</div>
-            <div className="kpi" data-testid="profile-overall-percent">{overallPercent}%</div>
+            <div className="muted">Lernfortschritt</div>
+            <div className="kpi" data-testid="profile-overall-percent">{activePercent}%</div>
             <div className="muted" style={{ fontSize: 12 }} data-testid="profile-overall-counts">
-              {totalPassed}/{totalLessons} Lektionen
+              {activePassed}/{activeTotal} Lektionen · {courseLabel(activeCourse)}
             </div>
           </div>
         </div>
@@ -230,7 +228,8 @@ export default async function ProfilePage() {
             </div>
             <div>
               <strong>Bestandene Lektionen:</strong>{' '}
-              <span data-testid="profile-passed-count">{totalPassed}</span>
+              <span data-testid="profile-passed-count">{activePassed}</span>
+              <span className="muted"> · {courseLabel(activeCourse)}</span>
             </div>
             <div>
               <strong>Konto erstellt:</strong>{' '}
