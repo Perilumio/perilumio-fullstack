@@ -73,3 +73,20 @@ Diese Version entwickelt den MVP zu einer saubereren Release-Basis weiter.
 - /admin zeigt Gate für Nicht-Admins
 - Server Actions prüfen Admin-Rolle vor Import/CRUD
 - Login-Skeleton unter app/(auth)/login/page.tsx
+
+
+## ABU Unterlektionen (100 Fragen pro Lektion → 1/5 … 5/5)
+- Strukturmigration: `supabase/migrations/20260536_lesson_sublesson_columns.sql`
+  ergänzt `public.lessons` um die nullable Spalten `sublesson_index` und
+  `sublesson_total`. Bestehende Lektionen und Fortschrittsdaten bleiben unberührt.
+- UI: `components/LearnClient.tsx` zeigt automatisch ein Pill „1/5"…„5/5",
+  sobald die Spalten gesetzt sind. XP-, Battle- und Progress-Logik bleiben
+  unverändert, da jede Unterlektion eine eigenständige `lessons`-Zeile mit
+  eigener UUID ist.
+- Fehlende Eingabe: `supabase/seeds/abu_fragenkatalog_100_pro_lektion.csv`
+  (gleicher Header wie der 30er-CSV, 11 Lektionen × je 100 Fragen, stabile
+  Reihenfolge nach `position`). Sobald die Datei vorliegt, erzeugt
+  `node scripts/build_abu_sublessons_migration.mjs` die idempotente
+  Daten-Migration `20260537_abu_100_questions_sublessons.sql`, die je
+  Original-Lektion fünf Unterlektionen mit je 20 Fragen anlegt
+  (Titel: `<Original> · 1/5` … `· 5/5`).

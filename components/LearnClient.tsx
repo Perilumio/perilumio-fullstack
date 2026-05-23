@@ -3,7 +3,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { Lumio } from '@/components/AppShell';
 import { AnswerFeedback, type AnswerFeedbackKind } from '@/components/AnswerFeedback';
 
-type Lesson = { id: string; title: string; position: number; pass_score: number };
+type Lesson = {
+  id: string;
+  title: string;
+  position: number;
+  pass_score: number;
+  sublesson_index?: number | null;
+  sublesson_total?: number | null;
+};
 type Question = {
   id: string;
   lesson_id: string;
@@ -332,6 +339,10 @@ export function LearnClient({
               const done = completedLessons.has(item.id) || Boolean(p?.passed);
               const inProgress = !done && (p?.last_question_index ?? 0) > 0;
               const status = done ? '✓ bestanden' : inProgress ? '… läuft' : 'neu';
+              const subBadge =
+                item.sublesson_index && item.sublesson_total
+                  ? `${item.sublesson_index}/${item.sublesson_total}`
+                  : null;
               return (
                 <button
                   key={item.id}
@@ -341,7 +352,18 @@ export function LearnClient({
                   data-current={index === lessonIndex ? 'true' : 'false'}
                   onClick={() => openLesson(index)}
                 >
-                  <span className="lesson-title">{item.title}</span>
+                  <span className="lesson-title">
+                    {item.title}
+                    {subBadge ? (
+                      <span
+                        className="pill"
+                        data-testid={`learn-sublesson-badge-${item.position}`}
+                        style={{ marginLeft: 8, fontSize: 11, padding: '2px 8px' }}
+                      >
+                        {subBadge}
+                      </span>
+                    ) : null}
+                  </span>
                   <span className="lesson-status">{status}</span>
                 </button>
               );
