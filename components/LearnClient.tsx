@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Lumio } from '@/components/AppShell';
 import { AnswerFeedback, type AnswerFeedbackKind } from '@/components/AnswerFeedback';
+import { lessonIconForTitle } from '@/lib/lessonIcons';
 
 type Lesson = {
   id: string;
@@ -377,7 +378,12 @@ export function LearnClient({
           <div className="card stack" data-testid="learn-current-lesson-card">
             <div>
               <div className="pill">Aktuelle Lektion</div>
-              <h3 style={{ margin: '8px 0 4px' }}>{baseLessonTitle(lesson)}</h3>
+              <h3 style={{ margin: '8px 0 4px' }}>
+                <span className="lesson-icon" aria-hidden="true" style={{ marginRight: 8 }}>
+                  {lessonIconForTitle(baseLessonTitle(lesson))}
+                </span>
+                {baseLessonTitle(lesson)}
+              </h3>
               <p className="muted" style={{ margin: 0 }}>
                 {(() => {
                   const p = progressMap.get(lesson.id);
@@ -443,6 +449,7 @@ export function LearnClient({
                   data-current={active.index === lessonIndex ? 'true' : 'false'}
                   onClick={() => openLesson(active.index)}
                 >
+                  <span className="lesson-icon" aria-hidden="true">{lessonIconForTitle(group.baseTitle)}</span>
                   <span className="lesson-title">{group.baseTitle}</span>
                   <span
                     className="lesson-status"
