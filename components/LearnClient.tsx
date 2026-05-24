@@ -384,7 +384,7 @@ export function LearnClient({
                   const total = lessonQuestions.length;
                   const subInfo =
                     lesson.sublesson_index && lesson.sublesson_total
-                      ? `Unterlektion ${lesson.sublesson_index}/${lesson.sublesson_total} · `
+                      ? `Sequenz ${lesson.sublesson_index}/${lesson.sublesson_total} · `
                       : '';
                   if (lessonCompleted) return `${subInfo}Bestanden — Wiederholung möglich (${total} Fragen)`;
                   const at = (p?.last_question_index ?? 0);
@@ -471,17 +471,17 @@ export function LearnClient({
         <>
           <div className="cq-header">
             <div className="cq-pills">
+              {lesson.sublesson_index && lesson.sublesson_total ? (
+                <span className="pill" data-testid="learn-sublesson-badge">
+                  Sequenz {lesson.sublesson_index}/{lesson.sublesson_total}
+                </span>
+              ) : null}
               <span className="pill" data-testid="learn-question-counter">
-                {questionIndex + 1} / {lessonQuestions.length}
+                Frage {questionIndex + 1}/{lessonQuestions.length}
               </span>
               <span className="pill" style={{ background: 'rgba(255,255,255,.04)', color: 'var(--muted)', borderColor: 'rgba(76,123,255,.18)' }}>
                 {baseLessonTitle(lesson)}
               </span>
-              {lesson.sublesson_index && lesson.sublesson_total ? (
-                <span className="pill" data-testid="learn-sublesson-badge">
-                  {lesson.sublesson_index}/{lesson.sublesson_total}
-                </span>
-              ) : null}
               {lessonCompleted ? (
                 <span className="pill" data-testid="learn-lesson-completed-badge">✓ bestanden</span>
               ) : null}
