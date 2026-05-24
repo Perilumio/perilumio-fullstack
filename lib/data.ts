@@ -2,10 +2,10 @@ import { createClient } from '@/lib/supabase/server';
 import { DEFAULT_COURSE_KEY, isValidCourseKey, type CourseKey } from '@/lib/courses-constants';
 
 // Supabase's hosted PostgREST caps a single response at 1000 rows. The ABU
-// course holds 80 sublessons × 20 questions = 1600 rows, so a single
-// .in('lesson_id', …) select returns a truncated slice (≈12 rows per lesson)
-// and individual sequences appeared as "Frage y/11" instead of "Frage y/20".
-// Paginate explicitly so every question for the requested lesson set is loaded.
+// course holds 160 sublessons × 10 questions = 1600 rows, so a single
+// .in('lesson_id', …) select returns a truncated slice and individual
+// sequences appear short of their actual question count. Paginate explicitly
+// so every question for the requested lesson set is loaded.
 async function fetchAllQuestionsForLessons(supabase: any, lessonIds: string[]) {
   if (lessonIds.length === 0) return [] as any[];
   const PAGE_SIZE = 1000;

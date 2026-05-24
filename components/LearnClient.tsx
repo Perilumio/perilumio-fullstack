@@ -291,9 +291,11 @@ export function LearnClient({
         nextSet.add(lesson.id);
         return nextSet;
       });
-      // For ABU sublessons we want the overview to flip from "1/5" to "2/5"
-      // immediately after a passing run, so we advance the current lesson
-      // pointer to the next sublesson in the same base lesson when one exists.
+      // For ABU sublessons we want the overview badge (e.g. 1/10) to advance to
+      // the next sequence immediately after a passing run, so we move the
+      // current lesson pointer to the next sublesson in the same base lesson
+      // when one exists. The counts (sublesson_index/sublesson_total) come
+      // from the DB row, so the UI works for any sublesson granularity.
       if (lesson.sublesson_index && lesson.sublesson_total) {
         const nextSublessonIdx = lessons.findIndex(
           (l, i) =>
@@ -336,7 +338,8 @@ export function LearnClient({
   }
 
   // For sublesson groups, the "active" item is the first non-passed sublesson
-  // (i.e. what x/5 should point at). When every sublesson is passed we keep the
+  // (i.e. what x/N should point at, where N is sublesson_total from the DB).
+  // When every sublesson is passed we keep the
   // last entry around so the card can still be repeated, but the group is
   // flagged as completed and the badge collapses to a ✓.
   function activeGroupItem(group: LessonGroup): { lesson: Lesson; index: number; allDone: boolean } {

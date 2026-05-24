@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Erzeugt eine destruktive + idempotente Migration, die den ABU-Kurs
 // vollständig aus supabase/seeds/abu_fragenkatalog_smartlearn_1_teil.csv neu
-// aufbaut: 16 Lektionen (= topics) × 5 Sequenzen × 20 Fragen = 1600 Fragen.
+// aufbaut: 16 Lektionen (= topics) × 10 Sequenzen × 10 Fragen = 1600 Fragen.
 //
 // Ablauf der erzeugten Migration:
 //   1. Sichere FK-Verkettung vorbereiten: ABU-Fortschritt, ABU-Versuche und
@@ -13,9 +13,9 @@
 //      existiert. Etwaige veraltete ABU-Module bleiben ohne Lektionen leer
 //      (Schema kennt keinen Modul-Cascade vom Kurs, daher sind diese Module
 //      harmlos und werden von der UI ignoriert, wenn sie leer sind).
-//   4. Pro Lektion 5 Sublesson-Zeilen in `lessons` einfügen
-//      ('<topic> · 1/5' .. '· 5/5') mit sublesson_index/sublesson_total.
-//   5. Pro Sublesson die 20 Fragen positionsbasiert (1..20) einfügen.
+//   4. Pro Lektion 10 Sublesson-Zeilen in `lessons` einfügen
+//      ('<topic> · 1/10' .. '· 10/10') mit sublesson_index/sublesson_total.
+//   5. Pro Sublesson die 10 Fragen positionsbasiert (1..10) einfügen.
 //
 // Verändert ausschliesslich ABU-Inhalte (course_key = 'abu'). Andere Kurse
 // werden nicht angerührt.
@@ -24,7 +24,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const SEED_PATH = 'supabase/seeds/abu_fragenkatalog_smartlearn_1_teil.csv';
-const OUT_PATH = 'supabase/migrations/20260538_abu_smartlearn_rebuild.sql';
+const OUT_PATH = 'supabase/migrations/20260539_abu_smartlearn_rebuild_10x10.sql';
+
+const SUB_COUNT = 10;
+const QUESTIONS_PER_SUB = 10;
 
 const MODULE_TITLE = 'Allgemeinbildung (ABU) – RLP 2025';
 const MODULE_COURSE_KEY = 'abu';
@@ -114,9 +117,9 @@ for (const l of lessons) {
 }
 
 const out = [];
-out.push('-- ABU Smartlearn 1. Teil: vollständiger destruktiver Neuaufbau.');
+out.push('-- ABU Smartlearn 1. Teil: vollständiger destruktiver Neuaufbau (10×10).');
 out.push('-- Generiert von scripts/build_abu_smartlearn_migration.mjs.');
-out.push('-- Inhalt: 16 Lektionen × 5 Sequenzen × 20 Fragen = 1600 Fragen.');
+out.push(`-- Inhalt: 16 Lektionen × ${SUB_COUNT} Sequenzen × ${QUESTIONS_PER_SUB} Fragen = 1600 Fragen.`);
 out.push('-- Idempotent: löscht alle ABU-Lektionen (cascade auf Fragen, Fortschritt,');
 out.push('-- Versuche und question_xp_awards) und baut den Kurs frisch aus dem CSV auf.');
 out.push('-- Verändert ausschliesslich ABU-Inhalte (course_key = ' + sqlString(MODULE_COURSE_KEY) + ').');
@@ -147,12 +150,12 @@ out.push('');
 let globalPosition = 1;
 for (const lesson of lessons) {
   const parentTitle = lesson.lesson_title;
-  for (let sub = 1; sub <= 5; sub += 1) {
-    const subTitle = `${parentTitle} · ${sub}/5`;
-    const startIdx = (sub - 1) * 20;
-    const subRows = lesson.rows.slice(startIdx, startIdx + 20);
+  for (let sub = 1; sub <= SUB_COUNT; sub += 1) {
+    const subTitle = `${parentTitle} · ${sub}/${SUB_COUNT}`;
+    const startIdx = (sub - 1) * QUESTIONS_PER_SUB;
+    const subRows = lesson.rows.slice(startIdx, startIdx + QUESTIONS_PER_SUB);
     out.push(`  -- ${lesson.module_key}.${sub} ${subTitle}`);
-    out.push(`  insert into public.lessons (module_id, title, position, pass_score, sublesson_index, sublesson_total) values (v_module_id, ${sqlString(subTitle)}, ${globalPosition}, 70, ${sub}, 5) returning id into v_lesson_id;`);
+    out.push(`  insert into public.lessons (module_id, title, position, pass_score, sublesson_index, sublesson_total) values (v_module_id, ${sqlString(subTitle)}, ${globalPosition}, 70, ${sub}, ${SUB_COUNT}) returning id into v_lesson_id;`);
     subRows.forEach((r, idx) => {
       const pos = idx + 1;
       const correct = String(r.correct_option || '').trim().toUpperCase();
@@ -173,4 +176,4 @@ out.push('');
 
 fs.writeFileSync(path.resolve(OUT_PATH), out.join('\n'));
 console.log(`Migration geschrieben: ${OUT_PATH}`);
-console.log(`Lektionen: ${lessons.length}, Sequenzen: ${lessons.length * 5}, Fragen: ${lessons.length * 100}`);
+console.log(`Lektionen: ${lessons.length}, Sequenzen: ${lessons.length * SUB_COUNT}, Fragen: ${lessons.length * SUB_COUNT * QUESTIONS_PER_SUB}`);

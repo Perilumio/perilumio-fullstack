@@ -2,10 +2,10 @@
 // scan. We keep the mapping in plain TypeScript (no icon library) so the UI
 // stays dependency-free and works the same on mobile and desktop.
 //
-// Mapping is keyed on the cleaned ABU base lesson title (no trailing " · N/5"
+// Mapping is keyed on the cleaned ABU base lesson title (no trailing " · N/M"
 // suffix), matching the 16 base lessons seeded by
-// supabase/migrations/20260538_abu_smartlearn_rebuild.sql. Unknown titles fall
-// back to a generic lesson icon, so non-ABU courses still render an icon.
+// supabase/migrations/20260539_abu_smartlearn_rebuild_10x10.sql. Unknown titles
+// fall back to a generic lesson icon, so non-ABU courses still render an icon.
 
 const ABU_LESSON_ICONS: Record<string, string> = {
   'Kauf und Konsum: Budget, Kaufvertrag und Gewährleistung': '🛒',

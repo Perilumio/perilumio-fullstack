@@ -75,18 +75,18 @@ Diese Version entwickelt den MVP zu einer saubereren Release-Basis weiter.
 - Login-Skeleton unter app/(auth)/login/page.tsx
 
 
-## ABU Unterlektionen (100 Fragen pro Lektion → 1/5 … 5/5)
+## ABU Unterlektionen (Smartlearn 1. Teil → 16 × 10 × 10 = 1600 Fragen)
 - Strukturmigration: `supabase/migrations/20260536_lesson_sublesson_columns.sql`
   ergänzt `public.lessons` um die nullable Spalten `sublesson_index` und
   `sublesson_total`. Bestehende Lektionen und Fortschrittsdaten bleiben unberührt.
-- UI: `components/LearnClient.tsx` zeigt automatisch ein Pill „1/5"…„5/5",
-  sobald die Spalten gesetzt sind. XP-, Battle- und Progress-Logik bleiben
-  unverändert, da jede Unterlektion eine eigenständige `lessons`-Zeile mit
-  eigener UUID ist.
-- Fehlende Eingabe: `supabase/seeds/abu_fragenkatalog_100_pro_lektion.csv`
-  (gleicher Header wie der 30er-CSV, 11 Lektionen × je 100 Fragen, stabile
-  Reihenfolge nach `position`). Sobald die Datei vorliegt, erzeugt
-  `node scripts/build_abu_sublessons_migration.mjs` die idempotente
-  Daten-Migration `20260537_abu_100_questions_sublessons.sql`, die je
-  Original-Lektion fünf Unterlektionen mit je 20 Fragen anlegt
-  (Titel: `<Original> · 1/5` … `· 5/5`).
+- UI: `components/LearnClient.tsx` liest `sublesson_index/sublesson_total` aus
+  der DB und zeigt dynamisch ein Pill „1/N"…„N/N" (aktuell N = 10). XP-,
+  Battle- und Progress-Logik bleiben unverändert, da jede Unterlektion eine
+  eigenständige `lessons`-Zeile mit eigener UUID ist.
+- Eingabe-CSV: `supabase/seeds/abu_fragenkatalog_smartlearn_1_teil.csv`
+  (16 Topics × 100 Fragen). Generator
+  `node scripts/build_abu_smartlearn_migration.mjs` erzeugt die destruktive
+  und idempotente Daten-Migration
+  `20260539_abu_smartlearn_rebuild_10x10.sql`: 16 Basis-Lektionen × 10
+  Sequenzen × 10 Fragen (Titel: `<Topic> · 1/10` … `· 10/10`). Verändert
+  ausschliesslich ABU-Inhalte (course_key = `abu`).
