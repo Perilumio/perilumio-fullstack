@@ -3,6 +3,24 @@ import { createClient } from '@/lib/supabase/server';
 
 const PASS_BONUS_XP = 50;
 
+// Computes the user's XP-leaderboard rank from a given XP value. We count
+// profiles with strictly higher XP and add 1, which mirrors how the
+// /leaderboard page orders by xp descending. Ties resolve to the same rank
+// (de-CH name tiebreak only matters for the visual list order — not for
+// "did the user move up?"). Returns null when the count query fails so the
+// caller can skip the rank-up modal instead of guessing.
+async function computeXpRank(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  xp: number,
+): Promise<number | null> {
+  const { count, error } = await supabase
+    .from('profiles')
+    .select('id', { count: 'exact', head: true })
+    .gt('xp', xp);
+  if (error) return null;
+  return (count ?? 0) + 1;
+}
+
 export async function POST(request: Request) {
   const supabase = await createClient();
   const body = await request.json();
@@ -59,6 +77,8 @@ export async function POST(request: Request) {
   let bonus = 0;
   let nextXp: number | undefined;
   let nextLevel: number | undefined;
+  let oldRank: number | null = null;
+  let newRank: number | null = null;
   if (newlyPassed) {
     bonus = PASS_BONUS_XP;
     const { data: profile } = await supabase
@@ -66,7 +86,14 @@ export async function POST(request: Request) {
       .select('xp, level')
       .eq('id', user.id)
       .single();
-    const computedXp = (profile?.xp ?? 0) + bonus;
+    const currentXp = profile?.xp ?? 0;
+    // Compute pre-award rank from current XP before the UPDATE lands. Both
+    // queries hit the same connection in sequence, so the only race is with
+    // *other* users' XP changing between the two counts — which is fine,
+    // we only care about this user's relative position around their own
+    // XP award.
+    oldRank = await computeXpRank(supabase, currentXp);
+    const computedXp = currentXp + bonus;
     nextXp = computedXp;
     nextLevel = Math.max(1, Math.floor(computedXp / 100) + 1);
     const { error: profileError } = await supabase
@@ -74,6 +101,7 @@ export async function POST(request: Request) {
       .update({ xp: computedXp, level: nextLevel })
       .eq('id', user.id);
     if (profileError) return NextResponse.json({ message: profileError.message }, { status: 500 });
+    newRank = await computeXpRank(supabase, computedXp);
   }
 
   return NextResponse.json({
@@ -84,5 +112,7 @@ export async function POST(request: Request) {
     bonusXp: bonus,
     xp: nextXp,
     level: nextLevel,
+    oldRank,
+    newRank,
   });
 }

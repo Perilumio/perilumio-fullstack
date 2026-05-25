@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Lumio } from '@/components/AppShell';
 import { AnswerFeedback, type AnswerFeedbackKind } from '@/components/AnswerFeedback';
+import { RankUpModal } from '@/components/RankUpModal';
 import { lessonIconForTitle } from '@/lib/lessonIcons';
 
 type Lesson = {
@@ -174,6 +175,7 @@ export function LearnClient({
   );
   const [resumedFrom, setResumedFrom] = useState<number | null>(null);
   const [feedbackFx, setFeedbackFx] = useState<{ id: number; kind: AnswerFeedbackKind } | null>(null);
+  const [rankUp, setRankUp] = useState<{ oldRank: number; newRank: number; bonusXp: number } | null>(null);
 
   const lesson = lessons[lessonIndex];
   const lessonQuestions = useMemo(
@@ -285,6 +287,20 @@ export function LearnClient({
         ? `${result.message} ${passed ? `Bestanden mit ${score}%${bonus}` : `Nicht bestanden mit ${score}%`}`
         : '',
     );
+    // Only celebrate when the user *actually* climbed the XP leaderboard from
+    // this lesson's XP award. The API returns oldRank/newRank only on a
+    // newly-passed lesson; both are numbers when the rank lookup succeeded.
+    if (
+      typeof result.oldRank === 'number' &&
+      typeof result.newRank === 'number' &&
+      result.newRank < result.oldRank
+    ) {
+      setRankUp({
+        oldRank: result.oldRank,
+        newRank: result.newRank,
+        bonusXp: Number(result.bonusXp) || 0,
+      });
+    }
     if (passed) {
       setCompletedLessons((prev) => {
         const nextSet = new Set(prev);
@@ -367,8 +383,18 @@ export function LearnClient({
     setView('overview');
   }
 
+  const rankUpModal = rankUp ? (
+    <RankUpModal
+      oldRank={rankUp.oldRank}
+      newRank={rankUp.newRank}
+      bonusXp={rankUp.bonusXp}
+      onClose={() => setRankUp(null)}
+    />
+  ) : null;
+
   if (view === 'overview') {
     return (
+      <>
       <div className="card stack" data-testid="learn-overview">
         <div className="hero">
           <div>
@@ -471,10 +497,13 @@ export function LearnClient({
         </div>
         {message ? <div className="card" data-testid="learn-lesson-summary">{message}</div> : null}
       </div>
+      {rankUpModal}
+      </>
     );
   }
 
   return (
+    <>
     <div className="card compact-question" data-testid="learn-question-view">
       <AnswerFeedback trigger={feedbackFx} />
       {question ? (
@@ -558,5 +587,7 @@ export function LearnClient({
         </>
       )}
     </div>
+    {rankUpModal}
+    </>
   );
 }
