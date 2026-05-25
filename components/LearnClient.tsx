@@ -220,6 +220,10 @@ export function LearnClient({
     setXpFeedback(null);
     setResumedFrom(resumeIndex > 0 ? resumeIndex : null);
     setPendingRankUp(null);
+    // Clear leftover answer-feedback fx so the buzzer/success cue from the
+    // previous lesson's last answer doesn't replay when the question view
+    // remounts for the new lesson.
+    setFeedbackFx(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lesson?.id]);
 
@@ -240,6 +244,7 @@ export function LearnClient({
     setXpFeedback(null);
     setResumedFrom(null);
     setPendingRankUp(null);
+    setFeedbackFx(null);
   }
 
   async function saveProgress(lessonId: string, lastQuestionIndex: number) {

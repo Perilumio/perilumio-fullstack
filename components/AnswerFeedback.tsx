@@ -125,9 +125,15 @@ function playBuzzer() {
 export function AnswerFeedback({ trigger }: { trigger: Trigger }) {
   const [active, setActive] = useState<Trigger>(null);
   const timerRef = useRef<number | null>(null);
+  // Trigger ids that have already been played. Survives remounts (e.g.
+  // overview ↔ question view) so a stale parent state can't replay the
+  // buzzer/success cue when the question view re-renders.
+  const lastPlayedIdRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!trigger) return;
+    if (lastPlayedIdRef.current === trigger.id) return;
+    lastPlayedIdRef.current = trigger.id;
     setActive(trigger);
     if (trigger.kind === 'wrong') {
       playBuzzer();
