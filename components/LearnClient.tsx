@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Lumio } from '@/components/AppShell';
 import { AnswerFeedback, type AnswerFeedbackKind } from '@/components/AnswerFeedback';
 import { RankUpModal } from '@/components/RankUpModal';
+import { SequenceResultModal } from '@/components/SequenceResultModal';
 import { lessonIconForTitle } from '@/lib/lessonIcons';
 
 type Lesson = {
@@ -176,6 +177,21 @@ export function LearnClient({
   const [resumedFrom, setResumedFrom] = useState<number | null>(null);
   const [feedbackFx, setFeedbackFx] = useState<{ id: number; kind: AnswerFeedbackKind } | null>(null);
   const [rankUp, setRankUp] = useState<{ oldRank: number; newRank: number; bonusXp: number } | null>(null);
+  // Sequence-end result modal: shown after the last question is answered and
+  // before any rank-up celebration. Holds the data needed to render the modal
+  // plus a deferred rank-up payload so we can chain into RankUpModal on
+  // "Weiter" when the user passed and actually climbed a rank.
+  const [sequenceResult, setSequenceResult] = useState<
+    | {
+        passed: boolean;
+        percent: number;
+        correct: number;
+        total: number;
+        pendingRankUp: { oldRank: number; newRank: number; bonusXp: number } | null;
+        advanceSublessonIndex: number | null;
+      }
+    | null
+  >(null);
   // Tracks the best (highest oldRank, lowest newRank) the user has reached
   // through per-question XP awards within the current sequence. We celebrate
   // at sequence end based on the cumulative climb so the modal lands once per
@@ -316,35 +332,57 @@ export function LearnClient({
     const bonusNew = typeof result.newRank === 'number' ? result.newRank : null;
     const candidates = [pendingRankUp, bonusOld !== null && bonusNew !== null ? { oldRank: bonusOld, newRank: bonusNew } : null]
       .filter((c): c is { oldRank: number; newRank: number } => c !== null);
+    let pendingClimb: { oldRank: number; newRank: number; bonusXp: number } | null = null;
     if (candidates.length > 0) {
       const oldRank = Math.max(...candidates.map((c) => c.oldRank));
       const newRank = Math.min(...candidates.map((c) => c.newRank));
       if (newRank < oldRank) {
-        setRankUp({ oldRank, newRank, bonusXp: Number(result.bonusXp) || 0 });
+        pendingClimb = { oldRank, newRank, bonusXp: Number(result.bonusXp) || 0 };
       }
     }
-    if (passed) {
+    // Pre-compute the next sublesson pointer (if any) so we can advance the
+    // overview after the user dismisses the sequence result modal, not before.
+    // Doing this now avoids racing against `lesson` updates inside the modal
+    // handler.
+    let advanceSublessonIndex: number | null = null;
+    if (passed && lesson.sublesson_index && lesson.sublesson_total) {
+      const nextSublessonIdx = lessons.findIndex(
+        (l, i) =>
+          i > lessonIndex &&
+          baseLessonTitle(l) === baseLessonTitle(lesson) &&
+          l.id !== lesson.id,
+      );
+      if (nextSublessonIdx !== -1) advanceSublessonIndex = nextSublessonIdx;
+    }
+    setSequenceResult({
+      passed,
+      percent: score,
+      correct: totalCorrect,
+      total: lessonQuestions.length,
+      // Only celebrate rank-up when the user passed the sequence — failing
+      // shouldn't open the rank-up modal even if per-question XP nudged the
+      // rank upward.
+      pendingRankUp: passed ? pendingClimb : null,
+      advanceSublessonIndex,
+    });
+  }
+
+  function finishSequenceResult() {
+    const result = sequenceResult;
+    setSequenceResult(null);
+    if (!result || !lesson) return;
+    if (result.passed) {
       setCompletedLessons((prev) => {
         const nextSet = new Set(prev);
         nextSet.add(lesson.id);
         return nextSet;
       });
-      // For ABU sublessons we want the overview badge (e.g. 1/10) to advance to
-      // the next sequence immediately after a passing run, so we move the
-      // current lesson pointer to the next sublesson in the same base lesson
-      // when one exists. The counts (sublesson_index/sublesson_total) come
-      // from the DB row, so the UI works for any sublesson granularity.
-      if (lesson.sublesson_index && lesson.sublesson_total) {
-        const nextSublessonIdx = lessons.findIndex(
-          (l, i) =>
-            i > lessonIndex &&
-            baseLessonTitle(l) === baseLessonTitle(lesson) &&
-            l.id !== lesson.id,
-        );
-        if (nextSublessonIdx !== -1) {
-          setLessonIndex(nextSublessonIdx);
-        }
+      if (result.advanceSublessonIndex !== null) {
+        setLessonIndex(result.advanceSublessonIndex);
       }
+    }
+    if (result.pendingRankUp) {
+      setRankUp(result.pendingRankUp);
     }
     resetLessonState();
     setView('overview');
@@ -411,6 +449,19 @@ export function LearnClient({
       newRank={rankUp.newRank}
       bonusXp={rankUp.bonusXp}
       onClose={() => setRankUp(null)}
+    />
+  ) : null;
+
+  // Render order matters: the sequence result modal must sit above the
+  // question view but render before the rank-up modal mounts, so we only
+  // attach it when no rank-up is already open.
+  const sequenceResultModal = sequenceResult && !rankUp ? (
+    <SequenceResultModal
+      passed={sequenceResult.passed}
+      percent={sequenceResult.percent}
+      correct={sequenceResult.correct}
+      total={sequenceResult.total}
+      onContinue={finishSequenceResult}
     />
   ) : null;
 
@@ -519,6 +570,7 @@ export function LearnClient({
         </div>
         {message ? <div className="card" data-testid="learn-lesson-summary">{message}</div> : null}
       </div>
+      {sequenceResultModal}
       {rankUpModal}
       </>
     );
@@ -609,6 +661,7 @@ export function LearnClient({
         </>
       )}
     </div>
+    {sequenceResultModal}
     {rankUpModal}
     </>
   );
