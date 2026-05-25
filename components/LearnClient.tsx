@@ -176,6 +176,11 @@ export function LearnClient({
   const [resumedFrom, setResumedFrom] = useState<number | null>(null);
   const [feedbackFx, setFeedbackFx] = useState<{ id: number; kind: AnswerFeedbackKind } | null>(null);
   const [rankUp, setRankUp] = useState<{ oldRank: number; newRank: number; bonusXp: number } | null>(null);
+  // Tracks the best (highest oldRank, lowest newRank) the user has reached
+  // through per-question XP awards within the current sequence. We celebrate
+  // at sequence end based on the cumulative climb so the modal lands once per
+  // sequence rather than mid-question. Reset on lesson change / restart.
+  const [pendingRankUp, setPendingRankUp] = useState<{ oldRank: number; newRank: number } | null>(null);
 
   const lesson = lessons[lessonIndex];
   const lessonQuestions = useMemo(
@@ -198,6 +203,7 @@ export function LearnClient({
     setCorrectCount(0);
     setXpFeedback(null);
     setResumedFrom(resumeIndex > 0 ? resumeIndex : null);
+    setPendingRankUp(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lesson?.id]);
 
@@ -217,6 +223,7 @@ export function LearnClient({
     setCorrectCount(0);
     setXpFeedback(null);
     setResumedFrom(null);
+    setPendingRankUp(null);
   }
 
   async function saveProgress(lessonId: string, lastQuestionIndex: number) {
@@ -246,6 +253,20 @@ export function LearnClient({
         awarded: result.awarded ?? 0,
         alreadyAwarded: Boolean(result.alreadyAwarded),
       });
+      // Aggregate the climb across the sequence: oldest oldRank seen vs the
+      // most recent newRank, so a sequence that moves 12 → 9 → 7 reports
+      // "12 → 7" once at the end rather than firing three separate modals.
+      if (
+        typeof result.oldRank === 'number' &&
+        typeof result.newRank === 'number' &&
+        result.newRank < result.oldRank
+      ) {
+        setPendingRankUp((prev) => {
+          const oldRank = prev ? Math.max(prev.oldRank, result.oldRank) : result.oldRank;
+          const newRank = prev ? Math.min(prev.newRank, result.newRank) : result.newRank;
+          return { oldRank, newRank };
+        });
+      }
     } catch {
       setXpFeedback({ awarded: 0, alreadyAwarded: false });
     }
@@ -287,19 +308,20 @@ export function LearnClient({
         ? `${result.message} ${passed ? `Bestanden mit ${score}%${bonus}` : `Nicht bestanden mit ${score}%`}`
         : '',
     );
-    // Only celebrate when the user *actually* climbed the XP leaderboard from
-    // this lesson's XP award. The API returns oldRank/newRank only on a
-    // newly-passed lesson; both are numbers when the rank lookup succeeded.
-    if (
-      typeof result.oldRank === 'number' &&
-      typeof result.newRank === 'number' &&
-      result.newRank < result.oldRank
-    ) {
-      setRankUp({
-        oldRank: result.oldRank,
-        newRank: result.newRank,
-        bonusXp: Number(result.bonusXp) || 0,
-      });
+    // Combine the rank climb from per-question XP (tracked across the
+    // sequence in pendingRankUp) with any additional climb from the pass
+    // bonus. Per-question XP usually accounts for the entire move (10×20 XP
+    // ≫ the 50 XP bonus), but bonus-only rank-ups still need to surface.
+    const bonusOld = typeof result.oldRank === 'number' ? result.oldRank : null;
+    const bonusNew = typeof result.newRank === 'number' ? result.newRank : null;
+    const candidates = [pendingRankUp, bonusOld !== null && bonusNew !== null ? { oldRank: bonusOld, newRank: bonusNew } : null]
+      .filter((c): c is { oldRank: number; newRank: number } => c !== null);
+    if (candidates.length > 0) {
+      const oldRank = Math.max(...candidates.map((c) => c.oldRank));
+      const newRank = Math.min(...candidates.map((c) => c.newRank));
+      if (newRank < oldRank) {
+        setRankUp({ oldRank, newRank, bonusXp: Number(result.bonusXp) || 0 });
+      }
     }
     if (passed) {
       setCompletedLessons((prev) => {
