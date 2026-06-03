@@ -6,8 +6,30 @@ import { ProfileEditor } from '@/components/ProfileEditor';
 import { createClient } from '@/lib/supabase/server';
 import { DEFAULT_AVATAR_KEY, avatarLabel } from '@/lib/avatars';
 import { COURSES, courseLabel, isValidCourseKey, DEFAULT_COURSE_KEY, type CourseKey } from '@/lib/courses';
+import { LevelBadge } from '@/components/LevelBadge';
+import { levelFromXp } from '@/lib/levels';
 
 export const dynamic = 'force-dynamic';
+
+// Kleines Flammen-Icon (SVG) fuer die Streak-Karte. Bewusst als Inline-SVG
+// statt Emoji, damit kein Emoji im UI landet und die Farbe zum Design passt.
+function FlameIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      style={{ flexShrink: 0 }}
+    >
+      <path
+        d="M12 2.5c1.6 2.7 1.2 4.6-.3 6.1-1.3 1.3-2.7 2.6-2.7 4.7a3 3 0 1 0 5.7 1.3c.8.9 1.3 2 1.3 3.2A6 6 0 1 1 7.5 13c0-3.1 2-5 3.2-6.6 1-1.4 1.5-2.7 1.3-3.9Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
 
 function deriveUsername(user: { id: string; email?: string | null; user_metadata?: any }) {
   const fromMeta = (user.user_metadata?.username ?? user.user_metadata?.display_name ?? '') as string;
@@ -103,6 +125,21 @@ export default async function ProfilePage() {
   const avatarKey = profile?.avatar_key ?? DEFAULT_AVATAR_KEY;
   const xp = profile?.xp ?? 0;
   const battlePoints = profile?.battle_points ?? 0;
+  const currentStreak = Number(profile?.current_streak) || 0;
+  const longestStreak = Number(profile?.longest_streak) || 0;
+  const level = Number(profile?.level) || levelFromXp(xp);
+
+  // Eigener Leaderboard-Rang (All-Time, alle Kurse) ueber die RPC. Fehler
+  // duerfen die Profilseite nicht blockieren, dann zeigen wir den Block nicht.
+  let selfRank: { rank: number; total: number } | null = null;
+  const { data: selfRankRows } = await supabase.rpc('leaderboard_xp_self', {
+    p_course_key: null,
+    p_since: null,
+  });
+  const selfRow = Array.isArray(selfRankRows) ? selfRankRows[0] : selfRankRows;
+  if (selfRow && Number(selfRow.rank) > 0) {
+    selfRank = { rank: Number(selfRow.rank), total: Number(selfRow.total_users) || 0 };
+  }
   const activeCourse: CourseKey = isValidCourseKey(profile?.active_course_key)
     ? (profile!.active_course_key as CourseKey)
     : DEFAULT_COURSE_KEY;
@@ -158,6 +195,48 @@ export default async function ProfilePage() {
               {activePassed}/{activeTotal} Lektionen · {courseLabel(activeCourse)}
             </div>
           </div>
+        </div>
+
+        <div className="grid grid-2" data-testid="profile-level-streak">
+          <div className="card stack" data-testid="profile-level-card">
+            <span className="pill">Stufe</span>
+            <LevelBadge level={level} xp={xp} testId="profile-level-badge" />
+          </div>
+
+          <div className="card stack streak-card" data-testid="profile-streak-card">
+            <span className="pill streak-pill" data-streak-current={currentStreak}>
+              <FlameIcon />
+              <span style={{ marginLeft: 6 }}>Streak</span>
+            </span>
+            <div className="streak-card-body">
+              <div>
+                <div className="kpi" data-testid="profile-streak-current">{currentStreak}</div>
+                <div className="muted" style={{ fontSize: 12 }}>
+                  {currentStreak === 1 ? 'Tag in Folge' : 'Tage in Folge'}
+                </div>
+              </div>
+              <div>
+                <div className="kpi" data-testid="profile-streak-longest">{longestStreak}</div>
+                <div className="muted" style={{ fontSize: 12 }}>laengste Serie</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card stack" data-testid="profile-rank-card">
+          <span className="pill">Rangliste</span>
+          {selfRank ? (
+            <p data-testid="profile-rank-text">
+              Rang <strong>#{selfRank.rank}</strong> von {selfRank.total} aktiven Lernenden
+            </p>
+          ) : (
+            <p className="muted" data-testid="profile-rank-empty">
+              Sammle XP im Lernpfad, um in die Rangliste aufgenommen zu werden.
+            </p>
+          )}
+          <Link href="/leaderboard" className="btn" data-testid="profile-rank-link">
+            Zur Rangliste
+          </Link>
         </div>
 
         <div className="card stack" data-testid="profile-course-progress">
