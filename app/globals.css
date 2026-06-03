@@ -196,3 +196,50 @@
 /* Antwort-Optionen während serverseitiger Auswertung (zwischen Klick und Reveal) */
 .option-pending{border-color:rgba(55,184,255,.45);background:linear-gradient(180deg,rgba(20,35,65,.96),rgba(14,22,40,.96));box-shadow:0 0 0 1px rgba(55,184,255,.25)}
 .option:disabled{cursor:default}
+
+/* Level-Badge (Profil) */
+.level-badge{display:flex;flex-direction:column;gap:10px}
+.level-badge-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.level-badge-chip{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;border:1px solid currentColor;background:rgba(8,14,28,.55);font-weight:700;font-size:14px}
+.level-badge-dot{width:9px;height:9px;border-radius:50%;box-shadow:0 0 10px currentColor}
+.level-badge-level{font-size:13px;font-weight:600}
+.level-badge-progress{display:flex;flex-direction:column;gap:6px}
+.level-badge-bar{height:10px;border-radius:999px;background:rgba(76,123,255,.16);overflow:hidden}
+.level-badge-bar-fill{height:100%;border-radius:999px;box-shadow:0 0 16px rgba(55,184,255,.4);transition:width .4s ease}
+.level-badge-hint{font-size:12px}
+
+/* Streak-Karte (Profil) */
+.streak-card .streak-pill{align-self:flex-start}
+.streak-card .streak-pill svg{color:#ffb066}
+.streak-card-body{display:flex;gap:24px;align-items:flex-end}
+
+/* Leaderboard: Tabs */
+.lb-controls{gap:12px}
+.lb-tabs{display:inline-flex;gap:6px;padding:6px;border-radius:18px;background:rgba(10,16,30,.7);border:1px solid rgba(76,123,255,.18);width:fit-content}
+.lb-tab{padding:8px 18px;border-radius:14px;border:1px solid transparent;background:transparent;color:var(--muted);font-weight:700;cursor:pointer;transition:color .15s ease,background .15s ease,border-color .15s ease}
+.lb-tab:hover{color:var(--text)}
+.lb-tab-active{color:#fff;background:linear-gradient(180deg,#33c7ff,#2372ff);border-color:transparent;box-shadow:0 0 16px rgba(55,184,255,.35)}
+
+/* Leaderboard: Filter-Reihe */
+.lb-filter-row{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap}
+.lb-filter-field{display:flex;flex-direction:column;gap:6px}
+.lb-filter-label{font-size:12px;font-weight:600}
+.lb-filter-select{min-width:200px}
+.lb-filter-select:disabled,.lb-period-pill:disabled{opacity:.45;cursor:not-allowed}
+.lb-period{display:inline-flex;gap:6px;flex-wrap:wrap}
+.lb-period-pill{padding:8px 14px;border-radius:999px;border:1px solid rgba(76,123,255,.22);background:linear-gradient(180deg,rgba(16,25,45,.96),rgba(12,18,34,.96));color:var(--muted);font-weight:600;font-size:13px;cursor:pointer;transition:color .15s ease,border-color .15s ease}
+.lb-period-pill:hover:not(:disabled){color:var(--text);border-color:rgba(55,184,255,.45)}
+.lb-period-pill-active{color:var(--blue2);border-color:rgba(55,184,255,.55);box-shadow:0 0 14px rgba(55,184,255,.18)}
+.lb-filter-note{font-size:12px}
+
+/* Leaderboard: Streak-Mini-Pill je Zeile */
+.lb-streak-mini{display:inline-flex;align-items:center;gap:4px;margin-left:auto;padding:4px 10px;border-radius:999px;background:linear-gradient(180deg,rgba(255,120,40,.18),rgba(255,80,20,.10));border:1px solid rgba(255,140,60,.42);color:#ffd1a8;font-size:12px;font-weight:700}
+.lb-streak-mini svg{color:#ffb066}
+.lb-row[data-me="true"]{border-color:rgba(55,184,255,.55);box-shadow:0 0 0 1px rgba(55,184,255,.3),0 0 22px rgba(55,184,255,.2)}
+
+/* Leaderboard: Sticky du-Karte */
+.lb-self-sticky{position:sticky;bottom:16px;z-index:30;margin-top:12px}
+.lb-self-row{background:linear-gradient(180deg,rgba(18,28,52,.98),rgba(11,17,32,.98));border-color:rgba(55,184,255,.4);box-shadow:0 0 0 1px rgba(80,130,255,.18),0 -8px 30px rgba(0,0,0,.45)}
+.lb-self-sticky[data-in-top="true"] .lb-self-row{border-color:rgba(76,123,255,.22);box-shadow:0 -6px 24px rgba(0,0,0,.4)}
+.lb-self-hint{margin-left:auto;font-size:12px}
+@media (max-width:480px){.streak-card-body{gap:16px}.lb-filter-select{min-width:0;width:100%}}
