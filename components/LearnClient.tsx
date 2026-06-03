@@ -14,16 +14,18 @@ type Lesson = {
   sublesson_index?: number | null;
   sublesson_total?: number | null;
 };
+// Anti-Cheat: correct_option und explanation werden NICHT mehr vom Server in
+// das initial gerenderte Question-Objekt aufgenommen. Die richtige Antwort
+// kommt erst nach dem POST /api/lesson-answer zurück. Das verhindert, dass
+// jemand im DevTools/Network-Tab die Lösungen vorab auslesen kann.
 type Question = {
   id: string;
   lesson_id: string;
   prompt: string;
-  explanation: string;
   option_a: string;
   option_b: string;
   option_c: string;
   option_d: string;
-  correct_option: 'A' | 'B' | 'C' | 'D';
 };
 type Progress = {
   lesson_id: string;
@@ -141,12 +143,14 @@ export function LearnClient({
   progress,
   courseName = 'Kurs',
   userId = null,
+  onStreakUpdate,
 }: {
   lessons: Lesson[];
   questions: Question[];
   progress: Progress[];
   courseName?: string;
   userId?: string | null;
+  onStreakUpdate?: (s: { current: number; longest: number; increased: boolean }) => void;
 }) {
   // Use the auth user id as seed material so each user gets their own stable
   // order. Fallback "anon" still produces a stable order for unauthenticated
@@ -168,6 +172,13 @@ export function LearnClient({
   const [lessonIndex, setLessonIndex] = useState(initialLessonIndex);
   const [questionIndex, setQuestionIndex] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
+  // Nach dem POST kennen wir die richtige Option und die Erklärung. Vorher
+  // bleiben beide leer, damit das UI keine vorzeitige Lösungsanzeige hat.
+  const [revealed, setRevealed] = useState<{
+    correctOption: 'A' | 'B' | 'C' | 'D';
+    explanation: string;
+    correct: boolean;
+  } | null>(null);
   const [correctCount, setCorrectCount] = useState(0);
   const [message, setMessage] = useState('');
   const [xpFeedback, setXpFeedback] = useState<{ awarded: number; alreadyAwarded: boolean } | null>(null);
@@ -216,6 +227,7 @@ export function LearnClient({
     const resumeIndex = saved && !saved.passed && savedIndex > 0 && savedIndex < total ? savedIndex : 0;
     setQuestionIndex(resumeIndex);
     setSelected(null);
+    setRevealed(null);
     setCorrectCount(0);
     setXpFeedback(null);
     setResumedFrom(resumeIndex > 0 ? resumeIndex : null);
@@ -240,6 +252,7 @@ export function LearnClient({
   function resetLessonState() {
     setQuestionIndex(0);
     setSelected(null);
+    setRevealed(null);
     setCorrectCount(0);
     setXpFeedback(null);
     setResumedFrom(null);
@@ -260,20 +273,37 @@ export function LearnClient({
   async function choose(key: string) {
     if (selected || !question) return;
     setSelected(key);
-    const isCorrect = key === question.correct_option;
-    if (isCorrect) setCorrectCount((v) => v + 1);
-    setFeedbackFx({ id: Date.now(), kind: isCorrect ? 'correct' : 'wrong' });
+    // Optimistisches Feedback gibt es erst, wenn der Server geantwortet hat —
+    // sonst könnte der Client falsches Feedback zeigen, wenn der Server eine
+    // andere correct_option kennt. Wir warten kurz.
     try {
       const response = await fetch('/api/lesson-answer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questionId: question.id, correct: isCorrect }),
+        body: JSON.stringify({ questionId: question.id, selectedOption: key }),
       });
       const result = await response.json();
+      const isCorrect = Boolean(result.correct);
+      if (isCorrect) setCorrectCount((v) => v + 1);
+      setFeedbackFx({ id: Date.now(), kind: isCorrect ? 'correct' : 'wrong' });
+      setRevealed({
+        correctOption: result.correctOption,
+        explanation: result.explanation ?? '',
+        correct: isCorrect,
+      });
       setXpFeedback({
         awarded: result.awarded ?? 0,
         alreadyAwarded: Boolean(result.alreadyAwarded),
       });
+      // Streak-Update an Parent weitergeben, damit der Streak-Pill oben in der
+      // Übersicht live mitläuft.
+      if (result.streak && onStreakUpdate) {
+        onStreakUpdate({
+          current: Number(result.streak.current) || 0,
+          longest: Number(result.streak.longest) || 0,
+          increased: Boolean(result.streak.increased),
+        });
+      }
       // Aggregate the climb across the sequence: oldest oldRank seen vs the
       // most recent newRank, so a sequence that moves 12 → 9 → 7 reports
       // "12 → 7" once at the end rather than firing three separate modals.
@@ -301,28 +331,26 @@ export function LearnClient({
       const nextIndex = questionIndex + 1;
       setQuestionIndex(nextIndex);
       setSelected(null);
+      setRevealed(null);
       setXpFeedback(null);
       setResumedFrom(null);
       if (lesson) void saveProgress(lesson.id, nextIndex);
       return;
     }
-    const totalCorrect = Math.min(correctCount, lessonQuestions.length);
-    const score = Math.min(
-      100,
-      lessonQuestions.length > 0 ? Math.round((totalCorrect / lessonQuestions.length) * 100) : 0,
-    );
-    const passed = score >= lesson.pass_score;
+    // Anti-Cheat: Wir schicken nur lessonId. Score, correct, total werden
+    // serverseitig aus question_xp_awards berechnet und kommen zurück.
     const response = await fetch('/api/lesson-complete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         lessonId: lesson.id,
-        correctAnswers: totalCorrect,
-        totalQuestions: lessonQuestions.length,
         lastQuestionIndex: lessonQuestions.length,
       }),
     });
     const result = await response.json();
+    const totalCorrect = Number(result.correctAnswers) || 0;
+    const score = Math.min(100, Math.max(0, Number(result.score) || 0));
+    const passed = Boolean(result.passed);
     const bonus = result.bonusXp ? ` (+${result.bonusXp} XP Bonus)` : '';
     setMessage(
       result.message
@@ -432,6 +460,14 @@ export function LearnClient({
 
   const totalLessons = lessonGroups.length;
   const doneCount = lessonGroups.filter((g) => g.items.every((it) => isLessonPassed(it.lesson.id))).length;
+  // Feinerer Sequenzen-Zähler: jede Sublesson (oder bei Nicht-Sublesson die
+  // Lektion selbst) zählt als eine Sequenz. Das gibt einen Balken, der sich
+  // schon nach jeder bestandenen Sequenz bewegt — nicht erst, wenn eine ganze
+  // Gruppe (10 Sequenzen) durch ist.
+  const totalSequences = lessons.length;
+  const doneSequences = lessons.filter((l) => isLessonPassed(l.id)).length;
+  const lessonPercent = totalLessons > 0 ? Math.round((doneCount / totalLessons) * 100) : 0;
+  const sequencePercent = totalSequences > 0 ? Math.round((doneSequences / totalSequences) * 100) : 0;
 
   function startOrResume() {
     setMessage('');
@@ -477,9 +513,63 @@ export function LearnClient({
         <div className="hero">
           <div>
             <h2>Übersicht</h2>
-            <p className="muted">{courseName} · {doneCount}/{totalLessons} Lektionen bestanden</p>
+            <p className="muted">{courseName}</p>
           </div>
           <Lumio />
+        </div>
+        <div className="learn-progress" data-testid="learn-progress-section">
+          <div className="learn-progress-row">
+            <div className="learn-progress-label">
+              <span>Lektionen</span>
+              <span
+                className="learn-progress-value"
+                data-testid="learn-progress-lessons-value"
+              >
+                {doneCount}/{totalLessons} · {lessonPercent}%
+              </span>
+            </div>
+            <div
+              className="learn-progress-bar"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={lessonPercent}
+              aria-label="Fortschritt Lektionen"
+              data-testid="learn-progress-lessons-bar"
+            >
+              <div
+                className="learn-progress-fill"
+                style={{ width: `${lessonPercent}%` }}
+              />
+            </div>
+          </div>
+          {totalSequences !== totalLessons ? (
+            <div className="learn-progress-row">
+              <div className="learn-progress-label">
+                <span>Sequenzen</span>
+                <span
+                  className="learn-progress-value"
+                  data-testid="learn-progress-sequences-value"
+                >
+                  {doneSequences}/{totalSequences} · {sequencePercent}%
+                </span>
+              </div>
+              <div
+                className="learn-progress-bar"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={sequencePercent}
+                aria-label="Fortschritt Sequenzen"
+                data-testid="learn-progress-sequences-bar"
+              >
+                <div
+                  className="learn-progress-fill learn-progress-fill-secondary"
+                  style={{ width: `${sequencePercent}%` }}
+                />
+              </div>
+            </div>
+          ) : null}
         </div>
         {lesson ? (
           <div className="card stack" data-testid="learn-current-lesson-card">
@@ -619,31 +709,49 @@ export function LearnClient({
           <h2 className="cq-prompt">{question.prompt}</h2>
           <div className="cq-options">
             {options.map((option) => {
-              const cls = selected
-                ? option.key === question.correct_option
+              // Server-revealed correct/wrong styling: erst nach POST gibt es
+              // eine sichtbare Markierung, vorher ist alles neutral. Dadurch
+              // verrät das DOM die richtige Antwort nicht vorab.
+              const cls = revealed
+                ? option.key === revealed.correctOption
                   ? 'option correct'
                   : option.key === selected
                     ? 'option wrong'
                     : 'option'
-                : 'option';
+                : selected === option.key
+                  ? 'option option-pending'
+                  : 'option';
               return (
-                <button key={option.key} className={cls} onClick={() => choose(option.key)}>
+                <button
+                  key={option.key}
+                  className={cls}
+                  onClick={() => choose(option.key)}
+                  disabled={Boolean(selected)}
+                >
                   <strong style={{ marginRight: 6 }}>{option.key}</strong>
                   {option.value}
                 </button>
               );
             })}
           </div>
-          {selected ? (
+          {revealed ? (
             <div className="cq-feedback" data-testid="learn-question-feedback">
               <strong data-testid="learn-xp-feedback">
-                {xpLabel(selected === question.correct_option)}
+                {xpLabel(revealed.correct)}
               </strong>
-              {question.explanation ? <> — {question.explanation}</> : null}
+              {revealed.explanation ? <> — {revealed.explanation}</> : null}
+            </div>
+          ) : selected ? (
+            <div className="cq-feedback muted" data-testid="learn-question-feedback-pending">
+              <em>Auswertung…</em>
             </div>
           ) : null}
           <div className="cq-actions">
-            <button className="btn btn-primary" onClick={next} disabled={!selected}>
+            <button
+              className="btn btn-primary"
+              onClick={next}
+              disabled={!selected || !revealed}
+            >
               {questionIndex < lessonQuestions.length - 1 ? 'Nächste' : 'Abschliessen'}
             </button>
             {lessonCompleted ? (

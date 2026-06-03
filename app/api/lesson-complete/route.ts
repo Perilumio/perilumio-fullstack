@@ -5,10 +5,7 @@ const PASS_BONUS_XP = 50;
 
 // Computes the user's XP-leaderboard rank from a given XP value. We count
 // profiles with strictly higher XP and add 1, which mirrors how the
-// /leaderboard page orders by xp descending. Ties resolve to the same rank
-// (de-CH name tiebreak only matters for the visual list order — not for
-// "did the user move up?"). Returns null when the count query fails so the
-// caller can skip the rank-up modal instead of guessing.
+// /leaderboard page orders by xp descending.
 async function computeXpRank(
   supabase: Awaited<ReturnType<typeof createClient>>,
   xp: number,
@@ -25,21 +22,50 @@ export async function POST(request: Request) {
   const supabase = await createClient();
   const body = await request.json();
   const { lessonId, lastQuestionIndex } = body;
-  const totalQuestions = Math.max(0, Number(body.totalQuestions) || 0);
-  const correctAnswers = Math.min(totalQuestions, Math.max(0, Number(body.correctAnswers) || 0));
-  const computedScore = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
-  const score = Math.min(100, Math.max(0, computedScore));
+  if (!lessonId) {
+    return NextResponse.json({ message: 'Ungültige Anfrage.' }, { status: 400 });
+  }
 
   const { data: auth } = await supabase.auth.getUser();
   const user = auth.user;
   if (!user) return NextResponse.json({ message: 'Nicht eingeloggt.' }, { status: 401 });
 
+  // Anti-Cheat: Client-Werte für correctAnswers/totalQuestions werden ignoriert.
+  // Stattdessen ziehen wir die "Wahrheit" direkt aus der DB:
+  //   total = Anzahl Fragen in dieser Lektion
+  //   correct = Anzahl Fragen dieser Lektion, für die der User bereits eine
+  //             XP-Award-Zeile hat (= mindestens einmal richtig beantwortet)
+  // Damit zählen nur tatsächlich richtige Antworten dieser Session-Historie.
   const { data: lesson } = await supabase
     .from('lessons')
-    .select('pass_score')
+    .select('id, pass_score')
     .eq('id', lessonId)
     .maybeSingle();
-  const passScore = lesson?.pass_score ?? 70;
+  if (!lesson) {
+    return NextResponse.json({ message: 'Lektion nicht gefunden.' }, { status: 404 });
+  }
+  const passScore = lesson.pass_score ?? 70;
+
+  const { data: lessonQuestions } = await supabase
+    .from('questions')
+    .select('id')
+    .eq('lesson_id', lessonId);
+  const questionIds = (lessonQuestions ?? []).map((q: any) => q.id as string);
+  const totalQuestions = questionIds.length;
+
+  let correctAnswers = 0;
+  if (totalQuestions > 0) {
+    const { count } = await supabase
+      .from('question_xp_awards')
+      .select('question_id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .in('question_id', questionIds);
+    correctAnswers = Math.min(totalQuestions, count ?? 0);
+  }
+
+  const score = totalQuestions > 0
+    ? Math.min(100, Math.round((correctAnswers / totalQuestions) * 100))
+    : 0;
   const passed = score >= passScore;
 
   const { error: attemptError } = await supabase.from('lesson_attempts').insert({
@@ -67,7 +93,7 @@ export async function POST(request: Request) {
     lesson_id: lessonId,
     best_score: bestScore,
     passed: alreadyPassed || passed,
-    last_question_index: lastQuestionIndex ?? 0,
+    last_question_index: Math.max(0, Math.floor(Number(lastQuestionIndex) || 0)),
   };
   const { error: progressError } = await supabase
     .from('lesson_progress')
@@ -87,11 +113,6 @@ export async function POST(request: Request) {
       .eq('id', user.id)
       .single();
     const currentXp = profile?.xp ?? 0;
-    // Compute pre-award rank from current XP before the UPDATE lands. Both
-    // queries hit the same connection in sequence, so the only race is with
-    // *other* users' XP changing between the two counts — which is fine,
-    // we only care about this user's relative position around their own
-    // XP award.
     oldRank = await computeXpRank(supabase, currentXp);
     const computedXp = currentXp + bonus;
     nextXp = computedXp;
@@ -107,6 +128,8 @@ export async function POST(request: Request) {
   return NextResponse.json({
     message: 'Lektion gespeichert.',
     score,
+    correctAnswers,
+    totalQuestions,
     passed,
     newlyPassed,
     bonusXp: bonus,

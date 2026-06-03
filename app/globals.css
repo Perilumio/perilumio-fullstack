@@ -176,3 +176,23 @@
 @keyframes seqresult-confetti-fall{0%{transform:translate3d(0,-20px,0) rotate(0);opacity:0}10%{opacity:1}100%{transform:translate3d(var(--drift,0),100vh,0) rotate(var(--rot,360deg));opacity:.9}}
 @media (max-width:480px){.seqresult-card{padding:22px 16px;border-radius:20px}.seqresult-title{font-size:24px}.seqresult-line{font-size:14px}}
 @media (prefers-reduced-motion:reduce){.seqresult-overlay{animation:none}.seqresult-card{animation:none}.seqresult-confetti{display:none}}
+/* Lernpfad: Fortschrittsbalken (Lektionen + Sequenzen) */
+.learn-progress{display:grid;gap:12px;padding:14px 16px;border-radius:18px;background:linear-gradient(180deg,rgba(16,25,45,.65),rgba(12,18,34,.55));border:1px solid rgba(76,123,255,.14)}
+.learn-progress-row{display:grid;gap:6px}
+.learn-progress-label{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.3px;text-transform:uppercase}
+.learn-progress-value{color:var(--blue2);font-variant-numeric:tabular-nums}
+.learn-progress-bar{position:relative;width:100%;height:10px;border-radius:999px;background:rgba(76,123,255,.12);overflow:hidden;border:1px solid rgba(76,123,255,.18)}
+.learn-progress-fill{position:absolute;inset:0;width:0;height:100%;background:linear-gradient(90deg,#37b8ff,#7bd8ff);box-shadow:0 0 14px rgba(55,184,255,.45);border-radius:999px;transition:width .35s cubic-bezier(.2,.7,.3,1)}
+.learn-progress-fill-secondary{background:linear-gradient(90deg,#5d6dff,#37b8ff);box-shadow:0 0 12px rgba(93,109,255,.35)}
+
+/* Lernpfad: Streak-Pill mit Flamme */
+.learn-hero-meta{display:flex;justify-content:flex-end;gap:8px;margin-top:-8px}
+.streak-pill{background:linear-gradient(180deg,rgba(255,120,40,.18),rgba(255,80,20,.10));border-color:rgba(255,140,60,.42);color:#ffd1a8;box-shadow:0 0 14px rgba(255,120,40,.22)}
+.streak-pill[data-streak-current="0"]{background:rgba(76,123,255,.08);border-color:rgba(76,123,255,.2);color:var(--muted);box-shadow:none}
+.streak-pill-pulse{animation:streak-pop .9s ease-out 1}
+@keyframes streak-pop{0%{transform:scale(1);box-shadow:0 0 14px rgba(255,120,40,.22)}30%{transform:scale(1.18);box-shadow:0 0 30px rgba(255,150,60,.65)}100%{transform:scale(1);box-shadow:0 0 14px rgba(255,120,40,.22)}}
+@media (prefers-reduced-motion:reduce){.streak-pill-pulse{animation:none}.learn-progress-fill{transition:none}}
+
+/* Antwort-Optionen während serverseitiger Auswertung (zwischen Klick und Reveal) */
+.option-pending{border-color:rgba(55,184,255,.45);background:linear-gradient(180deg,rgba(20,35,65,.96),rgba(14,22,40,.96));box-shadow:0 0 0 1px rgba(55,184,255,.25)}
+.option:disabled{cursor:default}
