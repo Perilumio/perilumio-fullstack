@@ -233,6 +233,9 @@
 .lb-period-pill:hover:not(:disabled){color:var(--text);border-color:rgba(55,184,255,.45)}
 .lb-period-pill-active{color:var(--blue2);border-color:rgba(55,184,255,.55);box-shadow:0 0 14px rgba(55,184,255,.18)}
 .lb-filter-note{font-size:12px}
+.lb-scope{margin-top:2px}
+.lb-scope-hint{font-size:13px;margin:0}
+.lb-scope-hint a{color:var(--blue2);font-weight:600}
 
 /* Leaderboard: Zeileninhalt dreizeilig gestapelt (Name / XP bzw. BP / Streak).
    Rang und Avatar bleiben links, oben ausgerichtet. */
