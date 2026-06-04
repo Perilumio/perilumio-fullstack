@@ -160,7 +160,7 @@ export default function FriendsClient({ friends, self }: Props) {
     return (
       <div className="card lb-row" key={row.id} data-testid={rowTestId}>
         <span className="lb-rank">#{index + 1}</span>
-        <Avatar avatarKey={row.avatar_key} size="sm" testId={`friends-${kind}-ranking-avatar`} />
+        <Avatar avatarKey={row.avatar_key} size="sm" testId={`friends-${kind}-ranking-avatar`} fallbackLabel={nameOf(row)} />
         <div className="lb-meta" style={{ flex: 1, minWidth: 0 }}>
           <strong>
             {nameOf(row)}
@@ -223,7 +223,7 @@ export default function FriendsClient({ friends, self }: Props) {
               const pending = pendingIds.has(row.id);
               return (
                 <div className="card lb-row" key={row.id} data-testid="friends-search-row">
-                  <Avatar avatarKey={row.avatar_key} size="sm" testId="friends-search-avatar" />
+                  <Avatar avatarKey={row.avatar_key} size="sm" testId="friends-search-avatar" fallbackLabel={nameOf(row)} />
                   <div className="lb-meta" style={{ flex: 1, minWidth: 0 }}>
                     <strong>{nameOf(row)}</strong>
                     <span className="muted" style={{ fontSize: 12 }}>

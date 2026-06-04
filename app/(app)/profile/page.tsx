@@ -160,7 +160,7 @@ export default async function ProfilePage() {
               <strong data-testid="profile-active-course">{courseLabel(activeCourse)}</strong>
             </p>
           </div>
-          <Avatar avatarKey={avatarKey} size="lg" testId="profile-current-avatar" />
+          <Avatar avatarKey={avatarKey} size="lg" testId="profile-current-avatar" fallbackLabel={username} />
         </div>
 
         <div className="card stack" data-testid="profile-editor-card">

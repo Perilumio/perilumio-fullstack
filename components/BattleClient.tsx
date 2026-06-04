@@ -558,7 +558,7 @@ function PlayerCard({
 }) {
   return (
     <div data-testid={testId} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-      <Avatar avatarKey={player.avatar_key} size="sm" />
+      <Avatar avatarKey={player.avatar_key} size="sm" fallbackLabel={player.username} />
       <div className="muted" style={{ fontSize: 12 }}>{label}</div>
       <div data-testid={testId ? `${testId}-name` : undefined} style={{ fontWeight: 600 }}>
         {player.username}
@@ -594,7 +594,7 @@ function CompactPlayer({
 }) {
   return (
     <div className="compact-player" data-testid={testId}>
-      <Avatar avatarKey={player.avatar_key} size="sm" />
+      <Avatar avatarKey={player.avatar_key} size="sm" fallbackLabel={player.username} />
       <div className="muted">{label}</div>
       <div data-testid={testId ? `${testId}-name` : undefined} className="compact-name">
         {player.username}
