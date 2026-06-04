@@ -234,6 +234,15 @@
 .lb-period-pill-active{color:var(--blue2);border-color:rgba(55,184,255,.55);box-shadow:0 0 14px rgba(55,184,255,.18)}
 .lb-filter-note{font-size:12px}
 
+/* Leaderboard: Zeileninhalt dreizeilig gestapelt (Name / XP bzw. BP / Streak).
+   Rang und Avatar bleiben links, oben ausgerichtet. */
+.lb-row:has(.lb-meta-rows){align-items:flex-start}
+.lb-meta-rows{gap:6px}
+.lb-meta-streak{display:flex;align-items:center;margin-top:2px}
+.lb-meta-streak>*{flex:0 0 auto}
+/* Im gestapelten Layout linksbuendig: das frueher genutzte margin-left:auto
+   wuerde die Pill sonst nach rechts schieben. */
+.lb-meta-rows .lb-streak-pill,.lb-meta-rows .lb-streak-main{margin-left:0}
 /* Leaderboard: Streak-Pill je Zeile (XP-/BP-Tab) */
 .lb-streak-pill{margin-left:auto;flex-shrink:0}
 .lb-streak-pill svg{color:#ffb066}

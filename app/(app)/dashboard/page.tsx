@@ -1,8 +1,24 @@
 import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
 import { Avatar } from '@/components/Avatar';
+import { StreakBadge } from '@/components/StreakBadge';
 import { getDashboardData } from '@/lib/data';
 import { courseLabel } from '@/lib/courses';
+
+// Streak-Anzeige analog zu /learn: ist der letzte Streak-Tag aelter als
+// gestern, gilt die Serie als gebrochen und wir zeigen 0 an, ohne in der DB
+// zu schreiben (der naechste Treffer setzt den Wert via RPC neu).
+function displayStreak(profile: any): number {
+  const raw = Number(profile?.current_streak) || 0;
+  if (raw <= 0) return 0;
+  const today = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Zurich' }));
+  today.setHours(0, 0, 0, 0);
+  const last = profile?.last_streak_date
+    ? new Date(`${profile.last_streak_date}T00:00:00`)
+    : null;
+  const diffDays = last ? Math.round((today.getTime() - last.getTime()) / 86400000) : null;
+  return diffDays === null || diffDays > 1 ? 0 : raw;
+}
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -48,6 +64,8 @@ export default async function DashboardPage() {
   const percent = lessons.length ? Math.round((completed / lessons.length) * 100) : 0;
   const greetingName = profile?.username ?? profile?.display_name ?? 'Lehrling';
   const activeCourse = activeCourseKey;
+  const streakCurrent = displayStreak(profile);
+  const streakLongest = Number((profile as any)?.longest_streak) || 0;
 
   return (
     <AppShell showHomeButton={false}>
@@ -60,6 +78,9 @@ export default async function DashboardPage() {
               Aktiver Kurs:{' '}
               <strong data-testid="dashboard-active-course">{courseLabel(activeCourse)}</strong>
             </p>
+            <div className="learn-hero-meta" data-testid="dashboard-hero-meta">
+              <StreakBadge current={streakCurrent} longest={streakLongest} />
+            </div>
           </div>
           <Avatar avatarKey={profile?.avatar_key} size="lg" testId="dashboard-avatar" />
         </div>

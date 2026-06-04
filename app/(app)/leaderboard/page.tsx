@@ -27,10 +27,10 @@ function streakLabel(streak: number) {
   return streak === 1 ? '1 Tag' : `${streak} Tage`;
 }
 
-// Flammen-Pill je Zeile, nur sichtbar wenn ein aktiver Streak laeuft. Nutzt die
-// bestehende .streak-pill-Klasse fuer kraeftigen Kontrast und gut lesbare Groesse.
+// Flammen-Pill je Zeile als dritte gestapelte Zeile. Bei einem Streak von 0
+// bleibt die Pill sichtbar (dezenter Stil ueber .streak-pill[data-streak-current="0"]),
+// damit jede Zeile konsistent dreizeilig ist.
 function StreakPill({ streak }: { streak: number }) {
-  if (streak <= 0) return null;
   return (
     <span
       className="pill streak-pill lb-streak-pill"
@@ -271,18 +271,24 @@ export default async function LeaderboardPage({
                 >
                   <span className="lb-rank">#{index + 1}</span>
                   <Avatar avatarKey={item.avatar_key} size="sm" testId="leaderboard-row-avatar" />
-                  <div className="lb-meta">
+                  <div className="lb-meta lb-meta-rows">
                     <strong data-testid="leaderboard-row-username">
                       {nameOf(item)}
                       {isMe && ' (du)'}
                     </strong>
-                    {tab !== 'streak' && <span className="muted">{item.scoreLabel}</span>}
+                    {tab === 'streak' ? (
+                      <span className="lb-meta-streak">
+                        <StreakMain streak={Number(item.current_streak) || 0} />
+                      </span>
+                    ) : (
+                      <>
+                        <span className="muted">{item.scoreLabel}</span>
+                        <span className="lb-meta-streak">
+                          <StreakPill streak={Number(item.current_streak) || 0} />
+                        </span>
+                      </>
+                    )}
                   </div>
-                  {tab === 'streak' ? (
-                    <StreakMain streak={Number(item.current_streak) || 0} />
-                  ) : (
-                    <StreakPill streak={Number(item.current_streak) || 0} />
-                  )}
                 </div>
               );
             })
@@ -294,14 +300,20 @@ export default async function LeaderboardPage({
         <div className="lb-self-sticky" data-testid="lb-self-card" data-in-top={meInTop ? 'true' : undefined}>
           <div className="card lb-row lb-self-row">
             <span className="lb-rank">#{selfCard.rank}</span>
-            <div className="lb-meta">
+            <div className="lb-meta lb-meta-rows">
               <strong>Dein Rang</strong>
               <span className="muted">
                 {selfCard.scoreLabel}
                 {selfCard.total ? ` · von ${selfCard.total} Lernenden` : ''}
               </span>
+              <span className="lb-meta-streak">
+                {tab === 'streak' ? (
+                  <StreakMain streak={selfCard.streak} />
+                ) : (
+                  <StreakPill streak={selfCard.streak} />
+                )}
+              </span>
             </div>
-            {tab !== 'streak' && <StreakPill streak={selfCard.streak} />}
             {meInTop && <span className="muted lb-self-hint">bereits in den Top 50</span>}
           </div>
         </div>
