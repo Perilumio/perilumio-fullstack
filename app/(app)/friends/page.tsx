@@ -80,7 +80,7 @@ export default async function FriendsPage() {
           <div>
             <span className="pill">Freunde</span>
             <h1>Dein Lernumfeld</h1>
-            <p className="muted">Suche Nutzer, füge sie als Freund hinzu und vergleiche XP und Battlepunkte.</p>
+            <p className="muted hide-mobile">Suche Nutzer, füge sie als Freund hinzu und vergleiche XP und Battlepunkte.</p>
           </div>
           <Lumio />
         </div>

@@ -156,7 +156,7 @@ export default async function ProfilePage() {
             <span className="pill">Profil</span>
             <h1 data-testid="profile-display-username">{username}</h1>
             <p className="muted">
-              Aktiver Kurs:{' '}
+              <span className="hide-mobile">Aktiver Kurs: </span>
               <strong data-testid="profile-active-course">{courseLabel(activeCourse)}</strong>
             </p>
           </div>
@@ -165,7 +165,7 @@ export default async function ProfilePage() {
 
         <div className="card stack" data-testid="profile-editor-card">
           <h2>Avatar & Benutzername</h2>
-          <p className="muted">Wähle deinen Avatar und Benutzernamen.</p>
+          <p className="muted hide-mobile">Wähle deinen Avatar und Benutzernamen.</p>
           <ProfileEditor initialUsername={username} initialAvatarKey={avatarKey} />
         </div>
 
@@ -189,7 +189,7 @@ export default async function ProfilePage() {
             <div className="muted" style={{ fontSize: 12 }}>aus Quizbattle</div>
           </div>
           <div className="card stat-card">
-            <div className="muted">Lernfortschritt</div>
+            <div className="muted"><span className="hide-mobile">Lernfortschritt</span><span className="show-mobile">Fortschritt</span></div>
             <div className="kpi" data-testid="profile-overall-percent">{activePercent}%</div>
             <div className="muted" style={{ fontSize: 12 }} data-testid="profile-overall-counts">
               {activePassed}/{activeTotal} Lektionen · {courseLabel(activeCourse)}
@@ -244,7 +244,7 @@ export default async function ProfilePage() {
             <div>
               <span className="pill">Kursfortschritt</span>
               <h2 style={{ margin: '8px 0 4px' }}>Pro Kurs</h2>
-              <p className="muted">Bestandene Lektionen je Kurs.</p>
+              <p className="muted hide-mobile">Bestandene Lektionen je Kurs.</p>
             </div>
           </div>
           {courseStats.map((c) => (

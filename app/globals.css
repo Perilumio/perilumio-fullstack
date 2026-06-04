@@ -269,3 +269,56 @@
   .lb-streak-main{padding:6px 12px;gap:6px}
   .lb-streak-main strong{font-size:20px}
 }
+
+/* Mobile-Pass (Schritt 7): kompaktere Header und Text-Diaet fuer enge Geraete
+   (Referenz iPhone SE 375x667). Desktop bleibt unveraendert; alle Regeln hier
+   greifen nur in Mobile-Breakpoints. */
+
+/* Sichtbarkeits-Helfer: konsistent ueber die ganze App. .hide-mobile blendet
+   reine Marketing-/Langtexte auf schmalen Displays aus, .show-mobile zeigt die
+   gekuerzte Variante nur dort. Inline-Default ueber [hidden] hinaus, damit auch
+   <span> sauber umschalten. */
+.show-mobile{display:none}
+@media (max-width:480px){
+  .hide-mobile{display:none !important}
+  .show-mobile{display:inline}
+}
+
+@media (max-width:480px){
+  /* Globaler Rand schlanker, damit Karten mehr Breite bekommen und lange
+     Inhalte nicht horizontal ueberlaufen. */
+  .container{padding:16px}
+  .shell-simple .container{padding-top:64px}
+
+  /* Header-Diaet: H1 kleiner (Vorgabe max 24px), Hero-Reihe enger gepackt und
+     vertikal kompakter. Avatar/Lumio im Hero deutlich kleiner, damit der
+     Hero-Block hoechstens ~40% der Viewporthoehe einnimmt. */
+  .hero{gap:12px;align-items:center}
+  .hero h1{font-size:22px;line-height:1.15;margin:6px 0 4px}
+  .hero h2{font-size:19px;line-height:1.15;margin:4px 0}
+  .hero p{font-size:13px;line-height:1.3}
+  .card.hero{padding:16px}
+
+  /* Hero-Avatar: Avatar-Komponente setzt Breite/Hoehe inline (lg=160px), daher
+     hier mit !important auf ~128px verkleinern. Trifft Bild und Initial-Badge
+     gleichermassen. */
+  .card.hero>img,
+  .card.hero>[data-avatar-fallback]{
+    width:128px !important;
+    height:auto !important;
+  }
+  .card.hero>[data-avatar-fallback]{height:115px !important}
+  .hero .lumio{width:56px;height:56px}
+
+  /* Streak-Pill im Hero etwas kompakter, damit die Begruessungszeile nicht zu
+     hoch wird. */
+  .learn-hero-meta{margin-top:8px}
+  .learn-hero-meta .streak-pill{font-size:13px;padding:8px 12px}
+}
+
+@media (max-width:380px){
+  .hero h1{font-size:20px}
+  .card.hero>img,
+  .card.hero>[data-avatar-fallback]{width:112px !important}
+  .card.hero>[data-avatar-fallback]{height:101px !important}
+}

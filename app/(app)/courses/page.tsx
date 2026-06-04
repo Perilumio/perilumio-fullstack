@@ -14,7 +14,7 @@ export default async function CoursesPage() {
             <span className="pill">Kurse</span>
             <h1>Wähle deinen Kurs</h1>
             <p className="muted">
-              Aktiver Kurs:{' '}
+              <span className="hide-mobile">Aktiver Kurs: </span>
               <strong data-testid="active-course-display">{courseLabel(active)}</strong>
             </p>
           </div>

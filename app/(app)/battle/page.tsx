@@ -17,8 +17,11 @@ export default async function BattlePage() {
         <div className="card hero">
           <div>
             <span className="pill" data-testid="battle-course-indicator">Kurs: {courseLabel(courseKey)}</span>
-            <h1>Quizbattle · Echtzeit-Duell</h1>
-            <p className="muted">Trete in der Warteschlange an und kämpfe gegen einen echten Mitspieler im selben Kurs.</p>
+            <h1>
+              <span className="hide-mobile">Quizbattle · Echtzeit-Duell</span>
+              <span className="show-mobile">Quizbattle</span>
+            </h1>
+            <p className="muted hide-mobile">Trete in der Warteschlange an und kämpfe gegen einen echten Mitspieler im selben Kurs.</p>
           </div>
           <Lumio />
         </div>
