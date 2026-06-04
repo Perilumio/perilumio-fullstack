@@ -1,33 +1,16 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 
-export async function POST(request: Request) {
-  const supabase = await createClient();
-  const { score, enemyScore } = await request.json();
-  const { data: auth } = await supabase.auth.getUser();
-  const user = auth.user;
-  if (!user) return NextResponse.json({ message: 'Nicht eingeloggt.' }, { status: 401 });
+export const dynamic = 'force-dynamic';
 
-  const bpReward = score > enemyScore ? 20 : score === enemyScore ? 5 : 0;
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('battle_points')
-    .eq('id', user.id)
-    .single();
-
-  const nextBattlePoints = (profile?.battle_points ?? 0) + bpReward;
-
-  const { error } = await supabase
-    .from('profiles')
-    .update({ battle_points: nextBattlePoints })
-    .eq('id', user.id);
-
-  if (error) return NextResponse.json({ message: error.message }, { status: 500 });
-
-  return NextResponse.json({
-    message: 'Battle gespeichert.',
-    bpReward,
-    battlePoints: nextBattlePoints,
-  });
+// Veralteter Endpunkt. Die fruehere Version hat Punkte (score, enemyScore) direkt
+// aus dem Client-Payload uebernommen und daraus BP vergeben. Das ist nicht
+// anti-cheat-sicher: ein Client koennte beliebige Scores melden. Battle-Scoring
+// und BP-Vergabe laufen jetzt ausschliesslich serverseitig ueber
+// app/api/battle/answer und lib/battle.ts (gegen questions.correct_option).
+// Der Endpunkt bleibt als 410 erhalten, falls noch alte Clients ihn aufrufen.
+export async function POST() {
+  return NextResponse.json(
+    { message: 'Dieser Endpunkt wird nicht mehr verwendet. Battle-Resultate werden serverseitig berechnet.' },
+    { status: 410 },
+  );
 }
