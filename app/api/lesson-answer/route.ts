@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { levelFromXp } from '@/lib/levels';
 
 const XP_PER_QUESTION = 20;
 
@@ -110,7 +111,7 @@ export async function POST(request: Request) {
   // caused by this single question.
   const oldRank = await computeXpRank(supabase, currentXp);
   const nextXp = currentXp + XP_PER_QUESTION;
-  const nextLevel = Math.max(1, Math.floor(nextXp / 100) + 1);
+  const nextLevel = levelFromXp(nextXp);
   const { error: profileError } = await supabase
     .from('profiles')
     .update({ xp: nextXp, level: nextLevel })

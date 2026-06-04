@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { levelFromXp } from '@/lib/levels';
 
 const PASS_BONUS_XP = 50;
 
@@ -116,7 +117,7 @@ export async function POST(request: Request) {
     oldRank = await computeXpRank(supabase, currentXp);
     const computedXp = currentXp + bonus;
     nextXp = computedXp;
-    nextLevel = Math.max(1, Math.floor(computedXp / 100) + 1);
+    nextLevel = levelFromXp(computedXp);
     const { error: profileError } = await supabase
       .from('profiles')
       .update({ xp: computedXp, level: nextLevel })
