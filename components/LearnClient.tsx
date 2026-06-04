@@ -468,11 +468,6 @@ export function LearnClient({
   const lessonPercent = totalLessons > 0 ? Math.round((doneCount / totalLessons) * 100) : 0;
   const sequencePercent = totalSequences > 0 ? Math.round((doneSequences / totalSequences) * 100) : 0;
 
-  function startOrResume() {
-    setMessage('');
-    setView('question');
-  }
-
   function openLesson(index: number) {
     setLessonIndex(index);
     setMessage('');
@@ -569,53 +564,6 @@ export function LearnClient({
             </div>
           ) : null}
         </div>
-        {lesson ? (
-          <div className="card stack" data-testid="learn-current-lesson-card">
-            <div>
-              <div className="pill">Aktuelle Lektion</div>
-              <h3 style={{ margin: '8px 0 4px' }}>
-                <span className="lesson-icon" aria-hidden="true" style={{ marginRight: 8 }}>
-                  {lessonIconForTitle(baseLessonTitle(lesson))}
-                </span>
-                {baseLessonTitle(lesson)}
-              </h3>
-              <p className="muted" style={{ margin: 0 }}>
-                {(() => {
-                  const p = progressMap.get(lesson.id);
-                  const total = lessonQuestions.length;
-                  const subInfo =
-                    lesson.sublesson_index && lesson.sublesson_total
-                      ? `Sequenz ${lesson.sublesson_index}/${lesson.sublesson_total} · `
-                      : '';
-                  if (lessonCompleted) return `${subInfo}Bestanden — Wiederholung möglich (${total} Fragen)`;
-                  const at = (p?.last_question_index ?? 0);
-                  if (at > 0 && at < total) return `${subInfo}Fortsetzen bei Frage ${at + 1} von ${total}`;
-                  return `${subInfo}${total} Fragen · Bestehensgrenze ${lesson.pass_score}%`;
-                })()}
-              </p>
-            </div>
-            <button
-              className="btn btn-primary"
-              data-testid="learn-start-current-question"
-              onClick={startOrResume}
-            >
-              {lessonCompleted
-                ? 'Lektion wiederholen'
-                : (progressMap.get(lesson.id)?.last_question_index ?? 0) > 0
-                  ? 'Weiterlernen'
-                  : 'Aktuelle Frage starten'}
-            </button>
-            {lessonCompleted ? (
-              <button
-                className="btn"
-                onClick={() => { restartLesson(); }}
-                data-testid="learn-lesson-restart-overview"
-              >
-                Lektion neu starten
-              </button>
-            ) : null}
-          </div>
-        ) : null}
         <div>
           <h3 style={{ margin: '4px 0 8px' }}>Alle Lektionen</h3>
           <div className="learn-overview-lessons" data-testid="learn-lessons-list">
