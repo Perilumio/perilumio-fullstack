@@ -4,8 +4,9 @@ import type { CourseKey } from '@/lib/courses-constants';
 export const BATTLE_QUESTION_COUNT = 5;
 // Inactivity (no new answer / no poll updating heartbeat) → match counts as stale.
 export const BATTLE_INACTIVITY_MS = 60_000;
-// Per-question time hint for the UI; server doesn't strictly enforce this.
-export const BATTLE_QUESTION_TIMEOUT_MS = 30_000;
+// Hard server-side limit per question: wer nach 60s nicht geantwortet hat, wird
+// automatisch als falsch gewertet, damit kein Match haengen bleibt.
+export const BATTLE_QUESTION_TIMEOUT_MS = 60_000;
 
 export const BP_WIN = 25;
 export const BP_DRAW = 10;
@@ -172,6 +173,7 @@ export async function findOrCreateMatch(userId: string, courseKey: CourseKey) {
         question_ids: questionIds,
         question_count: questionIds.length,
         started_at: new Date().toISOString(),
+        current_question_started_at: new Date().toISOString(),
         last_activity_at: new Date().toISOString(),
       })
       .eq('id', candidate.id)
@@ -179,7 +181,14 @@ export async function findOrCreateMatch(userId: string, courseKey: CourseKey) {
       .is('player2_id', null)
       .select('*')
       .maybeSingle();
-    if (claimed) return claimed;
+    if (claimed) {
+      await logBattleEvent(claimed.id, 'match_start', userId, {
+        course_key: courseKey,
+        player1_id: claimed.player1_id,
+        player2_id: claimed.player2_id,
+      });
+      return claimed;
+    }
   }
 
   // 4. No partner — create a new waiting match.
@@ -199,11 +208,99 @@ export async function findOrCreateMatch(userId: string, courseKey: CourseKey) {
   return created;
 }
 
+// Reconnect: liefert das juengste noch laufende (waiting/active) Match des
+// Users, ohne ein neues Match zu erstellen. Wird beim Laden der Battle-Seite
+// benutzt, damit ein Reload zurueck ins laufende Match fuehrt.
+export async function findActiveMatchForUser(userId: string) {
+  const { data } = await supabaseAdmin
+    .from('battle_matches')
+    .select('id, last_activity_at')
+    .in('status', ['waiting', 'active'])
+    .or(`player1_id.eq.${userId},player2_id.eq.${userId}`)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!data) return null;
+  // Abgelaufene Matches nicht als reconnectbar melden.
+  const last = new Date(data.last_activity_at).getTime();
+  if (Date.now() - last > BATTLE_INACTIVITY_MS) return null;
+  return data.id as string;
+}
+
 export async function touchActivity(matchId: string) {
   await supabaseAdmin
     .from('battle_matches')
     .update({ last_activity_at: new Date().toISOString() })
     .eq('id', matchId);
+}
+
+// Best-effort Audit-Log fuer Battle-Events. Schlaegt der Insert fehl (z.B. weil
+// die Tabelle in einer Umgebung noch nicht migriert ist), wird der Fehler
+// bewusst verschluckt, damit das Match dadurch nicht haengen bleibt.
+export async function logBattleEvent(
+  matchId: string,
+  eventType: 'match_start' | 'answer' | 'timeout' | 'match_end' | 'cancel',
+  userId: string | null,
+  detail: Record<string, unknown> = {},
+) {
+  try {
+    await supabaseAdmin.from('battle_logs').insert({
+      match_id: matchId,
+      user_id: userId,
+      event_type: eventType,
+      detail,
+    });
+  } catch {
+    // Logging darf den Spielablauf nie blockieren.
+  }
+}
+
+// Markiert alle Spieler, die die aktuelle Frage nach Ablauf des Timeouts noch
+// nicht beantwortet haben, automatisch als falsch (selected_option = null) und
+// laesst das Match danach weiterlaufen. Idempotent: laeuft das Timeout schon,
+// fuehren die Unique-Constraint-Konflikte zu No-ops.
+async function resolveQuestionTimeout(matchId: string) {
+  const { data: match } = await supabaseAdmin
+    .from('battle_matches')
+    .select('*')
+    .eq('id', matchId)
+    .maybeSingle();
+  if (!match || match.status !== 'active') return;
+  if (!match.player2_id) return;
+
+  const startedAt = match.current_question_started_at
+    ? new Date(match.current_question_started_at).getTime()
+    : null;
+  if (startedAt === null) return;
+  if (Date.now() - startedAt < BATTLE_QUESTION_TIMEOUT_MS) return;
+
+  const idx = match.current_question_index as number;
+  const questionIds: string[] = Array.isArray(match.question_ids) ? match.question_ids : [];
+  const questionId = questionIds[idx] ?? null;
+
+  const { data: answers } = await supabaseAdmin
+    .from('battle_answers')
+    .select('user_id')
+    .eq('match_id', matchId)
+    .eq('question_index', idx);
+  const answered = new Set((answers ?? []).map((a) => a.user_id));
+
+  for (const playerId of [match.player1_id, match.player2_id] as const) {
+    if (!playerId || answered.has(playerId)) continue;
+    const { error } = await supabaseAdmin.from('battle_answers').insert({
+      match_id: matchId,
+      user_id: playerId,
+      question_index: idx,
+      question_id: questionId,
+      selected_option: null,
+      is_correct: false,
+    });
+    if (!error || (error as any).code === '23505') {
+      await logBattleEvent(matchId, 'timeout', playerId, { question_index: idx });
+    }
+  }
+
+  await advanceMatchIfReady(matchId);
 }
 
 export async function recordAnswer(params: {
@@ -254,6 +351,12 @@ export async function recordAnswer(params: {
   if (insertError && (insertError as any).code !== '23505') {
     return { error: 'insert_failed' as const, detail: insertError.message };
   }
+  if (!insertError) {
+    await logBattleEvent(matchId, 'answer', userId, {
+      question_index: questionIndex,
+      is_correct: isCorrect,
+    });
+  }
 
   await advanceMatchIfReady(matchId);
   return { ok: true as const };
@@ -297,9 +400,12 @@ async function advanceMatchIfReady(matchId: string) {
         player1_score: newP1,
         player2_score: newP2,
         current_question_index: nextIndex,
+        current_question_started_at: new Date().toISOString(),
         last_activity_at: new Date().toISOString(),
       })
       .eq('id', matchId)
+      // Guard gegen Doppel-Advance: nur fortschreiten, wenn der Index noch der
+      // erwartete ist (verhindert State-Spruenge bei gleichzeitigen Antworten).
       .eq('current_question_index', idx);
     return;
   }
@@ -332,6 +438,12 @@ async function advanceMatchIfReady(matchId: string) {
   if (!finalized) return; // already finalized by another invocation
 
   await awardBp(finalized);
+  await logBattleEvent(matchId, 'match_end', null, {
+    result,
+    winner_id: winnerId,
+    player1_score: newP1,
+    player2_score: newP2,
+  });
 }
 
 async function awardBp(match: any) {
@@ -368,6 +480,9 @@ async function awardBp(match: any) {
 
 export async function buildState(matchId: string, userId: string): Promise<BattleStatePublic | null> {
   await touchActivity(matchId);
+  // Jeder Poll/State-Abruf treibt auch das Server-seitige Timeout an, damit ein
+  // Match nicht haengt, wenn ein Spieler nicht mehr antwortet.
+  await resolveQuestionTimeout(matchId);
 
   const { data: match } = await supabaseAdmin
     .from('battle_matches')
@@ -481,6 +596,7 @@ export async function leaveMatch(matchId: string, userId: string) {
       .update({ status: 'cancelled', finished_at: new Date().toISOString() })
       .eq('id', match.id)
       .eq('status', 'waiting');
+    await logBattleEvent(match.id, 'cancel', userId, { from_status: 'waiting' });
     return;
   }
   if (match.status === 'active') {
@@ -502,6 +618,13 @@ export async function leaveMatch(matchId: string, userId: string) {
       .eq('bp_awarded', false)
       .select('*')
       .maybeSingle();
-    if (finalized) await awardBp(finalized);
+    if (finalized) {
+      await awardBp(finalized);
+      await logBattleEvent(match.id, 'match_end', userId, {
+        reason: 'forfeit',
+        result: opponentRole,
+        winner_id: winnerId,
+      });
+    }
   }
 }

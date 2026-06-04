@@ -173,6 +173,30 @@ export function BattleClient({ courseName, hasQuestions }: { courseName: string;
     if (waitingMinTimerRef.current !== null) window.clearTimeout(waitingMinTimerRef.current);
   }, [stopPolling]);
 
+  // Reconnect: beim ersten Laden pruefen, ob der User bereits in einem laufenden
+  // Match ist, und ihn dort wieder einsteigen lassen, statt neu zu starten.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/battle/active', { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled || !data?.state) return;
+        const resumed: BattleState = data.state;
+        if (resumed.status === 'finished' || resumed.status === 'cancelled') return;
+        prevScoresRef.current = { self: resumed.you.score, opponent: resumed.opponent?.score ?? 0 };
+        setState(resumed);
+        lastQuestionIndexRef.current = resumed.current_question_index;
+        setPhase('in_match');
+        startPolling(resumed.match_id);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+    // Nur einmal beim Mount; startPolling ist stabil (useCallback).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const resetMatchLocal = useCallback(() => {
     setState(null);
     setSelected(null);
