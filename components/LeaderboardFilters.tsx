@@ -5,8 +5,14 @@ import { useCallback } from 'react';
 
 export type PeriodKey = 'all' | '30d' | '7d' | 'today';
 export type TabKey = 'xp' | 'bp' | 'streak';
+export type ScopeKey = 'all' | 'friends';
 
 export type CourseOption = { key: string; label: string };
+
+const SCOPES: ReadonlyArray<{ key: ScopeKey; label: string }> = [
+  { key: 'all', label: 'Alle Lernenden' },
+  { key: 'friends', label: 'Nur Freunde' },
+];
 
 const PERIODS: ReadonlyArray<{ key: PeriodKey; label: string }> = [
   { key: 'all', label: 'All-Time' },
@@ -30,11 +36,13 @@ export function LeaderboardFilters({
   tab,
   course,
   period,
+  scope,
 }: {
   courses: ReadonlyArray<CourseOption>;
   tab: TabKey;
   course: string;
   period: PeriodKey;
+  scope: ScopeKey;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -71,6 +79,29 @@ export function LeaderboardFilters({
               onClick={() => pushQuery({ tab: t.key })}
             >
               {t.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <div
+        className="lb-period lb-scope"
+        data-testid="lb-scope"
+        role="group"
+        aria-label="Reichweite"
+      >
+        {SCOPES.map((s) => {
+          const active = s.key === scope;
+          return (
+            <button
+              key={s.key}
+              type="button"
+              className={`lb-period-pill${active ? ' lb-period-pill-active' : ''}`}
+              data-testid={`lb-scope-${s.key}`}
+              aria-pressed={active}
+              onClick={() => pushQuery({ scope: s.key })}
+            >
+              {s.label}
             </button>
           );
         })}
