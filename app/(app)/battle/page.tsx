@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { AppShell, Lumio } from '@/components/AppShell';
+import { AppShell } from '@/components/AppShell';
 import { BattleClient } from '@/components/BattleClient';
 import { getActiveCourseKey, courseLabel } from '@/lib/courses';
 import { getCourseQuestions } from '@/lib/data';
@@ -23,7 +23,6 @@ export default async function BattlePage() {
             </h1>
             <p className="muted hide-mobile">Trete in der Warteschlange an und kämpfe gegen einen echten Mitspieler im selben Kurs.</p>
           </div>
-          <Lumio />
         </div>
         {!hasQuestions ? (
           <div className="card stack" data-testid="battle-empty-state">

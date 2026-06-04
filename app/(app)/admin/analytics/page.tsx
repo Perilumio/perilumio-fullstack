@@ -1,4 +1,4 @@
-import { AppShell, Lumio } from '@/components/AppShell';
+import { AppShell } from '@/components/AppShell';
 import { AdminGate } from '@/components/AdminGate';
 import { requireAdmin } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
@@ -141,7 +141,6 @@ export default async function AnalyticsPage() {
             <h1>Abbruchstellen & Export</h1>
             <p className="muted">Lektionen, die begonnen aber nicht bestanden wurden. Nur für Admins sichtbar.</p>
           </div>
-          <Lumio />
         </div>
 
         <div className="card stack">

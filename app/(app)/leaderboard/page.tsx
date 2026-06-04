@@ -1,4 +1,4 @@
-import { AppShell, Lumio } from '@/components/AppShell';
+import { AppShell } from '@/components/AppShell';
 import { Avatar } from '@/components/Avatar';
 import { LeaderboardFilters, type PeriodKey, type ScopeKey, type TabKey } from '@/components/LeaderboardFilters';
 import { createClient } from '@/lib/supabase/server';
@@ -329,7 +329,6 @@ export default async function LeaderboardPage({
             <h1>{heading}</h1>
             <p className="muted hide-mobile">{subtitle}</p>
           </div>
-          <Lumio />
         </div>
 
         <LeaderboardFilters

@@ -1,4 +1,4 @@
-import { AppShell, Lumio } from '@/components/AppShell';
+import { AppShell } from '@/components/AppShell';
 import { createClient } from '@/lib/supabase/server';
 import FriendsClient from '@/components/FriendsClient';
 
@@ -82,7 +82,6 @@ export default async function FriendsPage() {
             <h1>Dein Lernumfeld</h1>
             <p className="muted hide-mobile">Suche Nutzer, füge sie als Freund hinzu und vergleiche XP und Battlepunkte.</p>
           </div>
-          <Lumio />
         </div>
         <FriendsClient friends={friends} self={self} />
       </section>
