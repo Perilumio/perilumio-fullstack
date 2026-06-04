@@ -69,6 +69,51 @@ type Row = {
   scoreLabel: string;
 };
 
+// Eine Ranglisten-Zeile. Wird sowohl fuer die Top 50 als auch fuer die optional
+// unten angehaengte Self-Zeile verwendet, damit das Markup identisch bleibt.
+function LbRow({
+  item,
+  rank,
+  isMe,
+  tab,
+  selfBottom = false,
+}: {
+  item: Row;
+  rank: number;
+  isMe: boolean;
+  tab: TabKey;
+  selfBottom?: boolean;
+}) {
+  return (
+    <div
+      className="card lb-row"
+      data-testid={selfBottom ? 'lb-self-row-bottom' : isMe ? 'leaderboard-row-me' : 'leaderboard-row'}
+      data-me={isMe ? 'true' : undefined}
+    >
+      <span className="lb-rank">#{rank}</span>
+      <Avatar avatarKey={item.avatar_key} size="sm" testId="leaderboard-row-avatar" />
+      <div className="lb-meta lb-meta-rows">
+        <strong data-testid="leaderboard-row-username">
+          {nameOf(item)}
+          {isMe && ' (du)'}
+        </strong>
+        {tab === 'streak' ? (
+          <span className="lb-meta-streak">
+            <StreakMain streak={Number(item.current_streak) || 0} />
+          </span>
+        ) : (
+          <>
+            <span className="muted">{item.scoreLabel}</span>
+            <span className="lb-meta-streak">
+              <StreakPill streak={Number(item.current_streak) || 0} />
+            </span>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function parseTab(v: string | undefined): TabKey {
   return v === 'bp' || v === 'streak' ? v : 'xp';
 }
@@ -117,16 +162,18 @@ export default async function LeaderboardPage({
   const courseOptions = COURSES.map((c) => ({ key: c.key, label: c.label }));
 
   let rows: Row[] = [];
-  let selfCard: { rank: number; total: number | null; score: number; scoreLabel: string; streak: number } | null = null;
+  // Eigener Rang, um den User unten anzuhaengen, falls er nicht in den Top 50 ist.
+  let selfRank: number | null = null;
   let errorMessage: string | null = null;
 
-  // Eigener Streak-Wert fuer die "du"-Karte (in allen Tabs sichtbar).
+  // Eigenes Profil fuer die optionale Self-Zeile (Name, Avatar, Streak).
   const { data: myProfile } = await supabase
     .from('profiles')
-    .select('current_streak')
+    .select('username, display_name, avatar_key, current_streak')
     .eq('id', user.id)
     .maybeSingle();
   const mySelfStreak = Number((myProfile as any)?.current_streak) || 0;
+  const mySelfScore = { score: 0, scoreLabel: '' };
 
   if (tab === 'xp') {
     const since = sinceFromPeriod(period);
@@ -145,15 +192,11 @@ export default async function LeaderboardPage({
       score: Number(r.xp_total) || 0,
       scoreLabel: `XP ${formatScore(Number(r.xp_total) || 0)}`,
     }));
-    const selfRow = Array.isArray(selfRows) ? selfRows[0] : selfRows;
-    if (selfRow && Number(selfRow.rank) > 0) {
-      selfCard = {
-        rank: Number(selfRow.rank),
-        total: Number(selfRow.total_users) || null,
-        score: Number(selfRow.xp_total) || 0,
-        scoreLabel: `XP ${formatScore(Number(selfRow.xp_total) || 0)}`,
-        streak: mySelfStreak,
-      };
+    const selfData = Array.isArray(selfRows) ? selfRows[0] : selfRows;
+    if (selfData && Number(selfData.rank) > 0) {
+      selfRank = Number(selfData.rank);
+      mySelfScore.score = Number(selfData.xp_total) || 0;
+      mySelfScore.scoreLabel = `XP ${formatScore(Number(selfData.xp_total) || 0)}`;
     }
   } else if (tab === 'streak') {
     const { data: list, error: listErr } = await supabase.rpc('leaderboard_streak', { p_limit: 50 });
@@ -169,19 +212,13 @@ export default async function LeaderboardPage({
     }));
     // Eigener Streak-Rang ueber Count-Query.
     const myStreak = mySelfStreak;
-    if (myStreak > 0) {
-      const { count } = await supabase
-        .from('profiles')
-        .select('id', { count: 'exact', head: true })
-        .gt('current_streak', myStreak);
-      selfCard = {
-        rank: (count ?? 0) + 1,
-        total: null,
-        score: myStreak,
-        scoreLabel: streakLabel(myStreak),
-        streak: myStreak,
-      };
-    }
+    const { count } = await supabase
+      .from('profiles')
+      .select('id', { count: 'exact', head: true })
+      .gt('current_streak', myStreak);
+    selfRank = (count ?? 0) + 1;
+    mySelfScore.score = myStreak;
+    mySelfScore.scoreLabel = streakLabel(myStreak);
   } else {
     // BP: bestehende Logik, Top 50 nach battle_points aus profiles.
     const { data: list, error: listErr } = await supabase
@@ -209,16 +246,27 @@ export default async function LeaderboardPage({
       .from('profiles')
       .select('id', { count: 'exact', head: true })
       .gt('battle_points', myBp);
-    selfCard = {
-      rank: (count ?? 0) + 1,
-      total: null,
-      score: myBp,
-      scoreLabel: `BP ${formatScore(myBp)}`,
-      streak: mySelfStreak,
-    };
+    selfRank = (count ?? 0) + 1;
+    mySelfScore.score = myBp;
+    mySelfScore.scoreLabel = `BP ${formatScore(myBp)}`;
   }
 
   const meInTop = rows.some((r) => r.user_id === user.id);
+
+  // Self-Zeile nur anhaengen, wenn der User nicht ohnehin in den Top 50 steht.
+  const selfRow: (Row & { rank: number }) | null =
+    !meInTop && selfRank != null
+      ? {
+          user_id: user.id,
+          username: (myProfile as any)?.username ?? null,
+          display_name: (myProfile as any)?.display_name ?? null,
+          avatar_key: (myProfile as any)?.avatar_key ?? null,
+          current_streak: mySelfStreak,
+          score: mySelfScore.score,
+          scoreLabel: mySelfScore.scoreLabel,
+          rank: selfRank,
+        }
+      : null;
 
   const heading =
     tab === 'xp' ? 'Top Lernende' : tab === 'bp' ? 'Battlepunkte' : 'Laengste Serien';
@@ -260,64 +308,28 @@ export default async function LeaderboardPage({
               Noch keine Eintraege fuer diese Ansicht.
             </p>
           ) : (
-            rows.map((item, index) => {
-              const isMe = item.user_id === user.id;
-              return (
-                <div
-                  className="card lb-row"
+            <>
+              {rows.map((item, index) => (
+                <LbRow
                   key={item.user_id}
-                  data-testid={isMe ? 'leaderboard-row-me' : 'leaderboard-row'}
-                  data-me={isMe ? 'true' : undefined}
-                >
-                  <span className="lb-rank">#{index + 1}</span>
-                  <Avatar avatarKey={item.avatar_key} size="sm" testId="leaderboard-row-avatar" />
-                  <div className="lb-meta lb-meta-rows">
-                    <strong data-testid="leaderboard-row-username">
-                      {nameOf(item)}
-                      {isMe && ' (du)'}
-                    </strong>
-                    {tab === 'streak' ? (
-                      <span className="lb-meta-streak">
-                        <StreakMain streak={Number(item.current_streak) || 0} />
-                      </span>
-                    ) : (
-                      <>
-                        <span className="muted">{item.scoreLabel}</span>
-                        <span className="lb-meta-streak">
-                          <StreakPill streak={Number(item.current_streak) || 0} />
-                        </span>
-                      </>
-                    )}
+                  item={item}
+                  rank={index + 1}
+                  isMe={item.user_id === user.id}
+                  tab={tab}
+                />
+              ))}
+              {selfRow && (
+                <>
+                  <div className="lb-self-gap" aria-hidden="true">
+                    <span className="muted">…</span>
                   </div>
-                </div>
-              );
-            })
+                  <LbRow item={selfRow} rank={selfRow.rank} isMe tab={tab} selfBottom />
+                </>
+              )}
+            </>
           )}
         </div>
       </section>
-
-      {selfCard && (
-        <div className="lb-self-sticky" data-testid="lb-self-card" data-in-top={meInTop ? 'true' : undefined}>
-          <div className="card lb-row lb-self-row">
-            <span className="lb-rank">#{selfCard.rank}</span>
-            <div className="lb-meta lb-meta-rows">
-              <strong>Dein Rang</strong>
-              <span className="muted">
-                {selfCard.scoreLabel}
-                {selfCard.total ? ` · von ${selfCard.total} Lernenden` : ''}
-              </span>
-              <span className="lb-meta-streak">
-                {tab === 'streak' ? (
-                  <StreakMain streak={selfCard.streak} />
-                ) : (
-                  <StreakPill streak={selfCard.streak} />
-                )}
-              </span>
-            </div>
-            {meInTop && <span className="muted lb-self-hint">bereits in den Top 50</span>}
-          </div>
-        </div>
-      )}
     </AppShell>
   );
 }

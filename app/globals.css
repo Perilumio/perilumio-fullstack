@@ -253,11 +253,8 @@
 .lb-streak-main .muted{font-size:13px}
 .lb-row[data-me="true"]{border-color:rgba(55,184,255,.55);box-shadow:0 0 0 1px rgba(55,184,255,.3),0 0 22px rgba(55,184,255,.2)}
 
-/* Leaderboard: Sticky du-Karte */
-.lb-self-sticky{position:sticky;bottom:16px;z-index:30;margin-top:12px}
-.lb-self-row{background:linear-gradient(180deg,rgba(18,28,52,.98),rgba(11,17,32,.98));border-color:rgba(55,184,255,.4);box-shadow:0 0 0 1px rgba(80,130,255,.18),0 -8px 30px rgba(0,0,0,.45)}
-.lb-self-sticky[data-in-top="true"] .lb-self-row{border-color:rgba(76,123,255,.22);box-shadow:0 -6px 24px rgba(0,0,0,.4)}
-.lb-self-hint{margin-left:auto;font-size:12px}
+/* Leaderboard: dezente Trennung vor der unten angehaengten Self-Zeile */
+.lb-self-gap{display:flex;justify-content:center;padding:2px 0;letter-spacing:4px;line-height:1}
 @media (max-width:480px){.streak-card-body{gap:16px}.lb-filter-select{min-width:0;width:100%}}
 /* Leaderboard auf Mobile: Streak-Pill kompakt, damit sie neben der XP-/BP-Zahl
    vollstaendig sichtbar bleibt und nicht vom Karten-Rand abgeschnitten wird. */
