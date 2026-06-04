@@ -12,18 +12,49 @@ function nameOf(row: { username?: string | null; display_name?: string | null })
   return row.username || row.display_name || 'Lehrling';
 }
 
-// Kleines Flammen-Pill je Zeile, nur sichtbar wenn ein aktiver Streak laeuft.
-function StreakMini({ streak }: { streak: number }) {
+function FlameIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path
+        d="M12 2.5c1.6 2.7 1.2 4.6-.3 6.1-1.3 1.3-2.7 2.6-2.7 4.7a3 3 0 1 0 5.7 1.3c.8.9 1.3 2 1.3 3.2A6 6 0 1 1 7.5 13c0-3.1 2-5 3.2-6.6 1-1.4 1.5-2.7 1.3-3.9Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+function streakLabel(streak: number) {
+  return streak === 1 ? '1 Tag' : `${streak} Tage`;
+}
+
+// Flammen-Pill je Zeile, nur sichtbar wenn ein aktiver Streak laeuft. Nutzt die
+// bestehende .streak-pill-Klasse fuer kraeftigen Kontrast und gut lesbare Groesse.
+function StreakPill({ streak }: { streak: number }) {
   if (streak <= 0) return null;
   return (
-    <span className="lb-streak-mini" data-testid="lb-row-streak" title={`Streak: ${streak} Tage`}>
-      <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none">
-        <path
-          d="M12 2.5c1.6 2.7 1.2 4.6-.3 6.1-1.3 1.3-2.7 2.6-2.7 4.7a3 3 0 1 0 5.7 1.3c.8.9 1.3 2 1.3 3.2A6 6 0 1 1 7.5 13c0-3.1 2-5 3.2-6.6 1-1.4 1.5-2.7 1.3-3.9Z"
-          fill="currentColor"
-        />
-      </svg>
-      {streak}
+    <span
+      className="pill streak-pill lb-streak-pill"
+      data-testid="lb-streak-pill"
+      data-streak-current={streak}
+      title={`Streak: ${streakLabel(streak)}`}
+    >
+      <FlameIcon size={16} />
+      {streakLabel(streak)}
+    </span>
+  );
+}
+
+// Grosser Streak-Hauptwert fuer den Streak-Tab: prominent und mittig in der Zeile.
+function StreakMain({ streak }: { streak: number }) {
+  return (
+    <span
+      className="lb-streak-main"
+      data-testid="lb-streak-main"
+      title={`Streak: ${streakLabel(streak)}`}
+    >
+      <FlameIcon size={24} />
+      <strong>{streak}</strong>
+      <span className="muted">{streak === 1 ? 'Tag' : 'Tage'}</span>
     </span>
   );
 }
@@ -86,8 +117,16 @@ export default async function LeaderboardPage({
   const courseOptions = COURSES.map((c) => ({ key: c.key, label: c.label }));
 
   let rows: Row[] = [];
-  let selfCard: { rank: number; total: number | null; score: number; scoreLabel: string } | null = null;
+  let selfCard: { rank: number; total: number | null; score: number; scoreLabel: string; streak: number } | null = null;
   let errorMessage: string | null = null;
+
+  // Eigener Streak-Wert fuer die "du"-Karte (in allen Tabs sichtbar).
+  const { data: myProfile } = await supabase
+    .from('profiles')
+    .select('current_streak')
+    .eq('id', user.id)
+    .maybeSingle();
+  const mySelfStreak = Number((myProfile as any)?.current_streak) || 0;
 
   if (tab === 'xp') {
     const since = sinceFromPeriod(period);
@@ -113,6 +152,7 @@ export default async function LeaderboardPage({
         total: Number(selfRow.total_users) || null,
         score: Number(selfRow.xp_total) || 0,
         scoreLabel: `XP ${formatScore(Number(selfRow.xp_total) || 0)}`,
+        streak: mySelfStreak,
       };
     }
   } else if (tab === 'streak') {
@@ -128,12 +168,7 @@ export default async function LeaderboardPage({
       scoreLabel: `${Number(r.current_streak) || 0} Tage`,
     }));
     // Eigener Streak-Rang ueber Count-Query.
-    const { data: me } = await supabase
-      .from('profiles')
-      .select('current_streak, longest_streak, avatar_key, username, display_name')
-      .eq('id', user.id)
-      .maybeSingle();
-    const myStreak = Number((me as any)?.current_streak) || 0;
+    const myStreak = mySelfStreak;
     if (myStreak > 0) {
       const { count } = await supabase
         .from('profiles')
@@ -143,7 +178,8 @@ export default async function LeaderboardPage({
         rank: (count ?? 0) + 1,
         total: null,
         score: myStreak,
-        scoreLabel: `${myStreak} Tage`,
+        scoreLabel: streakLabel(myStreak),
+        streak: myStreak,
       };
     }
   } else {
@@ -178,6 +214,7 @@ export default async function LeaderboardPage({
       total: null,
       score: myBp,
       scoreLabel: `BP ${formatScore(myBp)}`,
+      streak: mySelfStreak,
     };
   }
 
@@ -239,9 +276,13 @@ export default async function LeaderboardPage({
                       {nameOf(item)}
                       {isMe && ' (du)'}
                     </strong>
-                    <span className="muted">{item.scoreLabel}</span>
+                    {tab !== 'streak' && <span className="muted">{item.scoreLabel}</span>}
                   </div>
-                  <StreakMini streak={Number(item.current_streak) || 0} />
+                  {tab === 'streak' ? (
+                    <StreakMain streak={Number(item.current_streak) || 0} />
+                  ) : (
+                    <StreakPill streak={Number(item.current_streak) || 0} />
+                  )}
                 </div>
               );
             })
@@ -260,6 +301,7 @@ export default async function LeaderboardPage({
                 {selfCard.total ? ` · von ${selfCard.total} Lernenden` : ''}
               </span>
             </div>
+            {tab !== 'streak' && <StreakPill streak={selfCard.streak} />}
             {meInTop && <span className="muted lb-self-hint">bereits in den Top 50</span>}
           </div>
         </div>

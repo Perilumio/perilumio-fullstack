@@ -60,27 +60,30 @@ export default async function LearnPage({ searchParams }: { searchParams?: Promi
   return (
     <AppShell>
       <section className="stack">
-        <div className="card hero">
-          <div>
-            <span className="pill" data-testid="learn-course-indicator">Kurs: {courseLabel(courseKey)}</span>
-            <h1>Lernpfad</h1>
-            <p className="muted">Schritt für Schritt durch den aktiven Kurs.</p>
-          </div>
-        </div>
         {lessons.length === 0 ? (
-          <div className="card stack" data-testid="learn-empty-state">
-            <h2>Noch keine Inhalte für {courseLabel(courseKey)}</h2>
-            <p className="muted">
-              Für diesen Kurs sind aktuell keine Lektionen hinterlegt. Wir arbeiten daran. Wähle einen anderen Kurs, um weiterzulernen.
-            </p>
-            <Link className="btn btn-primary" href="/courses" data-testid="learn-empty-courses-link">Zur Kursauswahl</Link>
-          </div>
+          <>
+            <div className="card hero">
+              <div>
+                <span className="pill" data-testid="learn-course-indicator">Kurs: {courseLabel(courseKey)}</span>
+                <h1>Lernpfad</h1>
+                <p className="muted">Schritt für Schritt durch den aktiven Kurs.</p>
+              </div>
+            </div>
+            <div className="card stack" data-testid="learn-empty-state">
+              <h2>Noch keine Inhalte für {courseLabel(courseKey)}</h2>
+              <p className="muted">
+                Für diesen Kurs sind aktuell keine Lektionen hinterlegt. Wir arbeiten daran. Wähle einen anderen Kurs, um weiterzulernen.
+              </p>
+              <Link className="btn btn-primary" href="/courses" data-testid="learn-empty-courses-link">Zur Kursauswahl</Link>
+            </div>
+          </>
         ) : (
           <LearnPageClient
             lessons={lessons as any}
             questions={questions as any}
             progress={progress}
             courseName={courseLabel(courseKey)}
+            courseLabel={courseLabel(courseKey)}
             userId={auth.user?.id ?? null}
             initialStreak={streak.current}
             initialLongest={streak.longest}

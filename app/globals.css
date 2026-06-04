@@ -186,8 +186,9 @@
 .learn-progress-fill-secondary{background:linear-gradient(90deg,#5d6dff,#37b8ff);box-shadow:0 0 12px rgba(93,109,255,.35)}
 
 /* Lernpfad: Streak-Pill mit Flamme */
-.learn-hero-meta{display:flex;justify-content:flex-end;gap:8px;margin-top:-8px}
-.streak-pill{background:linear-gradient(180deg,rgba(255,120,40,.18),rgba(255,80,20,.10));border-color:rgba(255,140,60,.42);color:#ffd1a8;box-shadow:0 0 14px rgba(255,120,40,.22)}
+.learn-hero-meta{display:flex;align-items:center;justify-content:flex-end;gap:8px}
+.streak-pill{font-size:14px;padding:10px 16px;background:linear-gradient(180deg,rgba(255,120,40,.18),rgba(255,80,20,.10));border-color:rgba(255,140,60,.42);color:#ffd1a8;box-shadow:0 0 14px rgba(255,120,40,.22)}
+.streak-pill svg{color:#ffb066}
 .streak-pill[data-streak-current="0"]{background:rgba(76,123,255,.08);border-color:rgba(76,123,255,.2);color:var(--muted);box-shadow:none}
 .streak-pill-pulse{animation:streak-pop .9s ease-out 1}
 @keyframes streak-pop{0%{transform:scale(1);box-shadow:0 0 14px rgba(255,120,40,.22)}30%{transform:scale(1.18);box-shadow:0 0 30px rgba(255,150,60,.65)}100%{transform:scale(1);box-shadow:0 0 14px rgba(255,120,40,.22)}}
@@ -232,9 +233,14 @@
 .lb-period-pill-active{color:var(--blue2);border-color:rgba(55,184,255,.55);box-shadow:0 0 14px rgba(55,184,255,.18)}
 .lb-filter-note{font-size:12px}
 
-/* Leaderboard: Streak-Mini-Pill je Zeile */
-.lb-streak-mini{display:inline-flex;align-items:center;gap:4px;margin-left:auto;padding:4px 10px;border-radius:999px;background:linear-gradient(180deg,rgba(255,120,40,.18),rgba(255,80,20,.10));border:1px solid rgba(255,140,60,.42);color:#ffd1a8;font-size:12px;font-weight:700}
-.lb-streak-mini svg{color:#ffb066}
+/* Leaderboard: Streak-Pill je Zeile (XP-/BP-Tab) */
+.lb-streak-pill{margin-left:auto;flex-shrink:0}
+.lb-streak-pill svg{color:#ffb066}
+/* Leaderboard: Grosser Streak-Hauptwert (Streak-Tab) */
+.lb-streak-main{margin-left:auto;display:inline-flex;align-items:center;gap:8px;flex-shrink:0;padding:8px 16px;border-radius:999px;background:linear-gradient(180deg,rgba(255,120,40,.20),rgba(255,80,20,.12));border:1px solid rgba(255,140,60,.5);box-shadow:0 0 18px rgba(255,120,40,.28)}
+.lb-streak-main svg{color:#ffb066}
+.lb-streak-main strong{font-size:24px;line-height:1;color:#ffd1a8}
+.lb-streak-main .muted{font-size:13px}
 .lb-row[data-me="true"]{border-color:rgba(55,184,255,.55);box-shadow:0 0 0 1px rgba(55,184,255,.3),0 0 22px rgba(55,184,255,.2)}
 
 /* Leaderboard: Sticky du-Karte */
