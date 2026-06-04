@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { AppShell, Lumio } from '@/components/AppShell';
+import { AppShell } from '@/components/AppShell';
 import { AdminGate } from '@/components/AdminGate';
 import { AdminAccountsTable, type AccountRow } from '@/components/AdminAccountsTable';
 import { requireAdmin } from '@/lib/auth';
@@ -96,7 +96,6 @@ export default async function AdminAccountsPage() {
               {rows.length} Konten · Löschungen sind <strong>unwiderruflich</strong>.
             </p>
           </div>
-          <Lumio />
         </div>
         <div>
           <Link href="/admin" className="btn">← Zurück zum Admin</Link>

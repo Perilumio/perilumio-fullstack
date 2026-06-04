@@ -1,6 +1,5 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { Lumio } from '@/components/AppShell';
 import { AnswerFeedback, type AnswerFeedbackKind } from '@/components/AnswerFeedback';
 import { RankUpModal } from '@/components/RankUpModal';
 import { SequenceResultModal } from '@/components/SequenceResultModal';
@@ -515,7 +514,6 @@ export function LearnClient({
             <h2>Übersicht</h2>
             <p className="muted">{courseName}</p>
           </div>
-          <Lumio />
         </div>
         <div className="learn-progress" data-testid="learn-progress-section">
           <div className="learn-progress-row">

@@ -1,4 +1,4 @@
-import { AppShell, Lumio } from '@/components/AppShell';
+import { AppShell } from '@/components/AppShell';
 import { CoursePicker } from '@/components/CoursePicker';
 import { getActiveCourseKey, courseLabel } from '@/lib/courses';
 
@@ -18,7 +18,6 @@ export default async function CoursesPage() {
               <strong data-testid="active-course-display">{courseLabel(active)}</strong>
             </p>
           </div>
-          <Lumio />
         </div>
         <CoursePicker activeCourseKey={active} />
       </section>
