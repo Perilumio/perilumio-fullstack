@@ -11,12 +11,10 @@ import { StreakBadge } from '@/components/StreakBadge';
 export function LearnPageClient({
   initialStreak,
   initialLongest,
-  courseLabel,
   ...rest
 }: React.ComponentProps<typeof LearnClient> & {
   initialStreak: number;
   initialLongest: number;
-  courseLabel: string;
 }) {
   const [streak, setStreak] = useState({
     current: initialStreak,
@@ -28,7 +26,6 @@ export function LearnPageClient({
     <>
       <div className="card hero" data-testid="learn-hero">
         <div>
-          <span className="pill" data-testid="learn-course-indicator">Kurs: {courseLabel}</span>
           <h1>Lernpfad</h1>
           <p className="muted">Schritt für Schritt durch den aktiven Kurs.</p>
           <div className="learn-hero-meta" data-testid="learn-hero-meta">

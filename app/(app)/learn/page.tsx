@@ -64,7 +64,6 @@ export default async function LearnPage({ searchParams }: { searchParams?: Promi
           <>
             <div className="card hero">
               <div>
-                <span className="pill" data-testid="learn-course-indicator">Kurs: {courseLabel(courseKey)}</span>
                 <h1>Lernpfad</h1>
                 <p className="muted">Schritt für Schritt durch den aktiven Kurs.</p>
               </div>
@@ -83,7 +82,6 @@ export default async function LearnPage({ searchParams }: { searchParams?: Promi
             questions={questions as any}
             progress={progress}
             courseName={courseLabel(courseKey)}
-            courseLabel={courseLabel(courseKey)}
             userId={auth.user?.id ?? null}
             initialStreak={streak.current}
             initialLongest={streak.longest}
