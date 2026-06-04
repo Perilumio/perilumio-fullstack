@@ -82,7 +82,7 @@ export default async function DashboardPage() {
               <StreakBadge current={streakCurrent} longest={streakLongest} />
             </div>
           </div>
-          <Avatar avatarKey={profile?.avatar_key} size="lg" testId="dashboard-avatar" />
+          <Avatar avatarKey={profile?.avatar_key} size="lg" testId="dashboard-avatar" fallbackLabel={greetingName} />
         </div>
         <div className="grid stats-grid" data-testid="dashboard-stats">
           <div className="card stat-card"><div className="muted">XP</div><div className="kpi" data-testid="dashboard-xp">{profile?.xp ?? 0}</div></div>

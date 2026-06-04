@@ -91,7 +91,7 @@ function LbRow({
       data-me={isMe ? 'true' : undefined}
     >
       <span className="lb-rank">#{rank}</span>
-      <Avatar avatarKey={item.avatar_key} size="sm" testId="leaderboard-row-avatar" />
+      <Avatar avatarKey={item.avatar_key} size="sm" testId="leaderboard-row-avatar" fallbackLabel={nameOf(item)} />
       <div className="lb-meta lb-meta-rows">
         <strong data-testid="leaderboard-row-username">
           {nameOf(item)}
