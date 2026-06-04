@@ -266,7 +266,7 @@ export default function FriendsClient({ friends, self }: Props) {
             <div>
               <span className="pill">Freunde · XP</span>
               <h2 style={{ margin: '8px 0 6px', fontSize: 20 }}>XP-Rangliste</h2>
-              <p className="muted" style={{ margin: 0, fontSize: 13 }}>
+              <p className="muted hide-mobile" style={{ margin: 0, fontSize: 13 }}>
                 Du und deine Freunde, sortiert nach XP.
               </p>
             </div>
@@ -284,7 +284,7 @@ export default function FriendsClient({ friends, self }: Props) {
             <div>
               <span className="pill">Freunde · BP</span>
               <h2 style={{ margin: '8px 0 6px', fontSize: 20 }}>Battlepunkte-Rangliste</h2>
-              <p className="muted" style={{ margin: 0, fontSize: 13 }}>
+              <p className="muted hide-mobile" style={{ margin: 0, fontSize: 13 }}>
                 Du und deine Freunde, sortiert nach Battlepunkten.
               </p>
             </div>

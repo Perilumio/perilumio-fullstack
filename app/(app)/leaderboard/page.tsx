@@ -327,7 +327,7 @@ export default async function LeaderboardPage({
           <div>
             <span className="pill">Rangliste</span>
             <h1>{heading}</h1>
-            <p className="muted">{subtitle}</p>
+            <p className="muted hide-mobile">{subtitle}</p>
           </div>
           <Lumio />
         </div>

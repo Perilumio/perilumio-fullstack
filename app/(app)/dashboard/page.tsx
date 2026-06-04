@@ -73,9 +73,12 @@ export default async function DashboardPage() {
         <div className="card hero">
           <div>
             <span className="pill"><span className="pill-dot" aria-hidden="true" />Live</span>
-            <h1>Willkommen zurück, {greetingName}.</h1>
+            <h1>
+              <span className="hide-mobile">Willkommen zurück, {greetingName}.</span>
+              <span className="show-mobile">Hallo {greetingName}</span>
+            </h1>
             <p className="muted">
-              Aktiver Kurs:{' '}
+              <span className="hide-mobile">Aktiver Kurs: </span>
               <strong data-testid="dashboard-active-course">{courseLabel(activeCourse)}</strong>
             </p>
             <div className="learn-hero-meta" data-testid="dashboard-hero-meta">
@@ -87,7 +90,7 @@ export default async function DashboardPage() {
         <div className="grid stats-grid" data-testid="dashboard-stats">
           <div className="card stat-card"><div className="muted">XP</div><div className="kpi" data-testid="dashboard-xp">{profile?.xp ?? 0}</div></div>
           <div className="card stat-card"><div className="muted">BP</div><div className="kpi" data-testid="dashboard-bp">{profile?.battle_points ?? 0}</div></div>
-          <div className="card stat-card"><div className="muted">Lernfortschritt</div><div className="kpi" data-testid="dashboard-percent">{percent}%</div></div>
+          <div className="card stat-card"><div className="muted"><span className="hide-mobile">Lernfortschritt</span><span className="show-mobile">Fortschritt</span></div><div className="kpi" data-testid="dashboard-percent">{percent}%</div></div>
           <div className="card stat-card"><div className="muted">Lektionen</div><div className="kpi" data-testid="dashboard-lessons">{completed}/{lessons.length}</div></div>
         </div>
         <nav className="home-menu" aria-label="Hauptmenü" data-testid="home-menu">
