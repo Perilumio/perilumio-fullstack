@@ -31,9 +31,9 @@ export function LearnPageClient({
           <span className="pill" data-testid="learn-course-indicator">Kurs: {courseLabel}</span>
           <h1>Lernpfad</h1>
           <p className="muted">Schritt für Schritt durch den aktiven Kurs.</p>
-        </div>
-        <div className="learn-hero-meta" data-testid="learn-hero-meta">
-          <StreakBadge current={streak.current} longest={streak.longest} pulse={streak.pulse} />
+          <div className="learn-hero-meta" data-testid="learn-hero-meta">
+            <StreakBadge current={streak.current} longest={streak.longest} pulse={streak.pulse} />
+          </div>
         </div>
       </div>
       <LearnClient

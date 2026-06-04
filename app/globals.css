@@ -11,7 +11,8 @@
 .avatar-option.is-selected .avatar-option-label{color:var(--blue2);font-weight:700}
 .lb-row{display:flex;align-items:center;gap:12px}
 .lb-row .lb-rank{font-weight:700;min-width:36px;color:var(--blue2)}
-.lb-row .lb-meta{display:flex;flex-direction:column;gap:2px}
+.lb-row .lb-meta{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.lb-row .lb-meta strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .btn-icon-x{flex-shrink:0;margin-left:auto;display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;padding:0;border-radius:12px;border:1px solid rgba(255,92,122,.32);background:linear-gradient(180deg,rgba(45,18,28,.92),rgba(28,12,18,.92));color:var(--red);cursor:pointer;box-shadow:0 0 14px rgba(255,92,122,.18);transition:color .15s ease,border-color .15s ease,box-shadow .15s ease,transform .1s ease}
 .btn-icon-x:hover:not(:disabled){color:#fff;border-color:rgba(255,92,122,.7);box-shadow:0 0 22px rgba(255,92,122,.45)}
 .btn-icon-x:focus-visible{outline:none;border-color:rgba(255,92,122,.8);box-shadow:0 0 0 2px rgba(255,92,122,.35),0 0 22px rgba(255,92,122,.45)}
@@ -186,7 +187,7 @@
 .learn-progress-fill-secondary{background:linear-gradient(90deg,#5d6dff,#37b8ff);box-shadow:0 0 12px rgba(93,109,255,.35)}
 
 /* Lernpfad: Streak-Pill mit Flamme */
-.learn-hero-meta{display:flex;align-items:center;justify-content:flex-end;gap:8px}
+.learn-hero-meta{display:flex;align-items:center;justify-content:flex-start;gap:8px;margin-top:12px}
 .streak-pill{font-size:14px;padding:10px 16px;background:linear-gradient(180deg,rgba(255,120,40,.18),rgba(255,80,20,.10));border-color:rgba(255,140,60,.42);color:#ffd1a8;box-shadow:0 0 14px rgba(255,120,40,.22)}
 .streak-pill svg{color:#ffb066}
 .streak-pill[data-streak-current="0"]{background:rgba(76,123,255,.08);border-color:rgba(76,123,255,.2);color:var(--muted);box-shadow:none}
@@ -249,3 +250,13 @@
 .lb-self-sticky[data-in-top="true"] .lb-self-row{border-color:rgba(76,123,255,.22);box-shadow:0 -6px 24px rgba(0,0,0,.4)}
 .lb-self-hint{margin-left:auto;font-size:12px}
 @media (max-width:480px){.streak-card-body{gap:16px}.lb-filter-select{min-width:0;width:100%}}
+/* Leaderboard auf Mobile: Streak-Pill kompakt, damit sie neben der XP-/BP-Zahl
+   vollstaendig sichtbar bleibt und nicht vom Karten-Rand abgeschnitten wird. */
+@media (max-width:480px){
+  .lb-row{gap:8px}
+  .lb-row .lb-rank{min-width:24px;font-size:13px}
+  .lb-streak-pill{font-size:12px;padding:6px 10px;gap:4px}
+  .lb-streak-pill svg{width:13px;height:13px}
+  .lb-streak-main{padding:6px 12px;gap:6px}
+  .lb-streak-main strong{font-size:20px}
+}
