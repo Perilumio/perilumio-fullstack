@@ -170,6 +170,22 @@ function LoginInner() {
     }
   }
 
+  async function onOAuth(provider: 'google' | 'apple') {
+    if (busy) return;
+    resetFeedback();
+    setStatus('busy');
+    const supabase = createClient();
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: `${origin}/auth/callback?next=/learn` },
+    });
+    if (error) {
+      setStatus('error');
+      setError(translateError(error.message));
+    }
+  }
+
   async function onResend() {
     if (resendCooldown > 0 || status === 'busy') return;
     const target = (pendingEmail || email).trim();
@@ -360,6 +376,30 @@ function LoginInner() {
               <p style={{ color: 'crimson' }}>Fehler: {error}</p>
             )}
 
+            {mode === 'login' && (
+              <div className="stack" style={{ gap: 8 }}>
+                <p className="muted" style={{ textAlign: 'center' }}>oder</p>
+                <button
+                  type="button"
+                  className="btn"
+                  data-testid="oauth-google"
+                  onClick={() => onOAuth('google')}
+                  disabled={busy}
+                >
+                  Mit Google fortfahren
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  data-testid="oauth-apple"
+                  onClick={() => onOAuth('apple')}
+                  disabled={busy}
+                >
+                  Mit Apple fortfahren
+                </button>
+              </div>
+            )}
+
             <div className="stack" style={{ gap: 8 }}>
               {mode === 'login' && (
                 <>
@@ -396,7 +436,6 @@ function LoginInner() {
           </>
         )}
 
-        <p className="muted">Nach dem Login entscheidet die Rolle im Profil über den Admin-Zugriff.</p>
         <Link href="/">Zur Startseite</Link>
       </section>
     </main>
