@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { DEFAULT_COURSE_KEY, isValidCourseKey, type CourseKey } from '@/lib/courses-constants';
 
-export { COURSES, DEFAULT_COURSE_KEY, isValidCourseKey, courseLabel } from '@/lib/courses-constants';
+export { COURSES, DEFAULT_COURSE_KEY, isValidCourseKey, courseLabel, isCourseSelectable, isComingSoonCourse } from '@/lib/courses-constants';
 export type { CourseKey } from '@/lib/courses-constants';
 
 export async function getActiveCourseKey(): Promise<CourseKey> {

@@ -109,6 +109,8 @@
 .course-row-pill{flex-shrink:0;padding:5px 10px;font-size:11px}
 .course-row-btn{flex-shrink:0;padding:8px 12px;font-size:13px;border-radius:12px;min-height:36px}
 .course-empty{padding:14px;text-align:center;font-size:13px}
+.course-row-soon{opacity:.55;cursor:not-allowed}
+.course-row-soon .course-row-pill{background:rgba(76,123,255,.16);color:var(--muted)}
 @media (max-width:480px){.course-list{max-height:60vh;gap:5px}.course-row{padding:7px 10px;border-radius:12px;min-height:46px;gap:8px}.course-row-title{font-size:13.5px}.course-row-sub{font-size:11px}.course-row-btn{padding:7px 10px;font-size:12.5px;border-radius:11px}.course-row-pill{padding:4px 9px;font-size:10.5px}}
 @media (max-width:480px){.learn-overview-lessons .lesson-row{padding:9px 10px;border-radius:12px}.learn-overview-lessons .lesson-row .lesson-title{font-size:13.5px}.learn-overview-lessons .lesson-row .lesson-icon{width:26px;height:26px;font-size:14px;border-radius:8px}}
 .answer-fx{position:fixed;inset:0;pointer-events:none;z-index:9999;display:flex;align-items:center;justify-content:center;contain:layout paint;will-change:opacity}

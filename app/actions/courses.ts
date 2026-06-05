@@ -1,7 +1,7 @@
 'use server';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
-import { isValidCourseKey, type CourseKey } from '@/lib/courses-constants';
+import { isValidCourseKey, isCourseSelectable, type CourseKey } from '@/lib/courses-constants';
 
 export type SetActiveCourseResult = { ok: boolean; message: string; activeCourseKey?: CourseKey };
 
@@ -12,6 +12,7 @@ export async function setActiveCourse(_prev: SetActiveCourseResult | null, formD
 
   const raw = String(formData.get('course_key') ?? '');
   if (!isValidCourseKey(raw)) return { ok: false, message: 'Unbekannter Kurs.' };
+  if (!isCourseSelectable(raw)) return { ok: false, message: 'Dieser Kurs ist noch nicht verfuegbar.' };
 
   const { error } = await supabase
     .from('profiles')
