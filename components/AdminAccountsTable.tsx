@@ -12,6 +12,7 @@ export type AccountRow = {
   active_course_label: string;
   xp: number;
   battle_points: number;
+  current_streak: number;
   lessons_passed: number;
   created_at: string;
   last_sign_in_at: string | null;
@@ -38,6 +39,8 @@ export function AdminAccountsTable({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [roleBusyId, setRoleBusyId] = useState<string | null>(null);
+  const [roleError, setRoleError] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -50,6 +53,32 @@ export function AdminAccountsTable({
       return hay.includes(q);
     });
   }, [rows, query]);
+
+  async function toggleRole(row: AccountRow) {
+    const nextRole = row.role === 'admin' ? 'student' : 'admin';
+    setRoleBusyId(row.id);
+    setRoleError(null);
+    setNotice(null);
+    try {
+      const res = await fetch('/api/admin/accounts/role', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: row.id, role: nextRole }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; message?: string };
+      if (!res.ok || !data.ok) {
+        setRoleError(data.message || `Fehler (${res.status}).`);
+        setRoleBusyId(null);
+        return;
+      }
+      setNotice(`Rolle auf ${nextRole} gesetzt.`);
+      setRoleBusyId(null);
+      router.refresh();
+    } catch (err) {
+      setRoleError(err instanceof Error ? err.message : 'Unbekannter Fehler.');
+      setRoleBusyId(null);
+    }
+  }
 
   function openDialog(row: AccountRow) {
     setTarget(row);
@@ -118,6 +147,9 @@ export function AdminAccountsTable({
           {notice}
         </div>
       )}
+      {roleError && (
+        <p className="field-error" data-testid="admin-accounts-role-error">{roleError}</p>
+      )}
       <div style={{ overflowX: 'auto' }}>
         <table className="table" data-testid="admin-accounts-table">
           <thead>
@@ -127,7 +159,8 @@ export function AdminAccountsTable({
               <th>Rolle</th>
               <th>Aktiver Kurs</th>
               <th>XP / BP</th>
-              <th>Lektionen ✓</th>
+              <th>Streak</th>
+              <th>Lektionen</th>
               <th>Erstellt</th>
               <th>Letzter Login</th>
               <th></th>
@@ -136,7 +169,7 @@ export function AdminAccountsTable({
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={9} className="muted" style={{ textAlign: 'center', padding: 24 }}>
+                <td colSpan={10} className="muted" style={{ textAlign: 'center', padding: 24 }}>
                   Keine Konten gefunden.
                 </td>
               </tr>
@@ -148,12 +181,27 @@ export function AdminAccountsTable({
                   <td>{r.email ?? '—'}</td>
                   <td>{r.username ?? r.display_name ?? '—'}</td>
                   <td>
-                    <span className="pill" style={r.role === 'admin' ? { background: 'rgba(255,216,77,.16)', color: '#ffd84d', borderColor: 'rgba(255,216,77,.45)' } : undefined}>
-                      {r.role}
-                    </span>
+                    <button
+                      type="button"
+                      className="pill"
+                      onClick={() => toggleRole(r)}
+                      disabled={self || roleBusyId === r.id}
+                      title={self ? 'Eigene Rolle nicht aenderbar' : `Rolle wechseln zu ${r.role === 'admin' ? 'student' : 'admin'}`}
+                      data-testid={`account-role-${r.id}`}
+                      style={{
+                        cursor: self ? 'not-allowed' : 'pointer',
+                        opacity: self ? 0.6 : 1,
+                        ...(r.role === 'admin'
+                          ? { background: 'rgba(255,216,77,.16)', color: '#ffd84d', borderColor: 'rgba(255,216,77,.45)' }
+                          : {}),
+                      }}
+                    >
+                      {roleBusyId === r.id ? '...' : r.role}
+                    </button>
                   </td>
                   <td>{r.active_course_label}</td>
                   <td>{r.xp} / {r.battle_points}</td>
+                  <td>{r.current_streak}</td>
                   <td>{r.lessons_passed}</td>
                   <td>{fmtDate(r.created_at)}</td>
                   <td>{fmtDate(r.last_sign_in_at)}</td>

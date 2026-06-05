@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { courseLabel } from '@/lib/courses-constants';
+import { courseLabel, COURSES } from '@/lib/courses-constants';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-type ExportType = 'dropoffs' | 'users' | 'progress';
+type ExportType = 'dropoffs' | 'users' | 'progress' | 'courses';
 
 function csvEscape(value: unknown): string {
   if (value === null || value === undefined) return '';
@@ -46,9 +46,49 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const typeParam = url.searchParams.get('type') ?? 'dropoffs';
   const type: ExportType =
-    typeParam === 'users' || typeParam === 'progress' || typeParam === 'dropoffs'
+    typeParam === 'users' || typeParam === 'progress' || typeParam === 'dropoffs' || typeParam === 'courses'
       ? typeParam
       : 'dropoffs';
+
+  if (type === 'courses') {
+    const [profilesRes, progressRes, lessonsRes, modulesRes] = await Promise.all([
+      supabaseAdmin.from('profiles').select('id,active_course_key,xp'),
+      supabaseAdmin.from('lesson_progress').select('passed,lesson_id'),
+      supabaseAdmin.from('lessons').select('id,module_id'),
+      supabaseAdmin.from('modules').select('id,course_key'),
+    ]);
+    const profs = (profilesRes.data ?? []) as { id: string; active_course_key: string | null; xp: number | null }[];
+    const prog = (progressRes.data ?? []) as { passed: boolean; lesson_id: string }[];
+    const less = (lessonsRes.data ?? []) as { id: string; module_id: string }[];
+    const mods = (modulesRes.data ?? []) as { id: string; course_key: string | null }[];
+
+    const modById = new Map(mods.map((m) => [m.id, m]));
+    const lessonCourse = new Map<string, string | null>();
+    for (const l of less) lessonCourse.set(l.id, modById.get(l.module_id)?.course_key ?? null);
+
+    const passedByCourse = new Map<string, number>();
+    for (const p of prog) {
+      if (!p.passed) continue;
+      const key = lessonCourse.get(p.lesson_id);
+      if (!key) continue;
+      passedByCourse.set(key, (passedByCourse.get(key) ?? 0) + 1);
+    }
+    const enrolledByCourse = new Map<string, number>();
+    const xpSumByCourse = new Map<string, number>();
+    for (const prof of profs) {
+      const key = prof.active_course_key;
+      if (!key) continue;
+      enrolledByCourse.set(key, (enrolledByCourse.get(key) ?? 0) + 1);
+      xpSumByCourse.set(key, (xpSumByCourse.get(key) ?? 0) + (prof.xp ?? 0));
+    }
+    const headers = ['Kurs', 'Eingeschriebene User', 'Abgeschlossene Sequenzen', 'Durchschnittliche XP'];
+    const rows = COURSES.map((c) => {
+      const enrolled = enrolledByCourse.get(c.key) ?? 0;
+      const xpSum = xpSumByCourse.get(c.key) ?? 0;
+      return [c.label, enrolled, passedByCourse.get(c.key) ?? 0, enrolled > 0 ? Math.round(xpSum / enrolled) : 0];
+    });
+    return csvResponse(buildCsv(headers, rows), type);
+  }
 
   if (type === 'users') {
     const { data } = await supabaseAdmin.from('analytics_user_summary').select('*');
