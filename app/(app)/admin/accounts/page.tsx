@@ -17,6 +17,7 @@ type ProfileRow = {
   active_course_key: string | null;
   xp: number | null;
   battle_points: number | null;
+  current_streak: number | null;
 };
 
 type LessonProgressRow = { user_id: string; passed: boolean };
@@ -51,7 +52,7 @@ export default async function AdminAccountsPage() {
     listAllAuthUsers(),
     supabaseAdmin
       .from('profiles')
-      .select('id,username,display_name,role,active_course_key,xp,battle_points'),
+      .select('id,username,display_name,role,active_course_key,xp,battle_points,current_streak'),
     supabaseAdmin.from('lesson_progress').select('user_id,passed'),
   ]);
 
@@ -76,6 +77,7 @@ export default async function AdminAccountsPage() {
         active_course_label: courseLabel(prof?.active_course_key ?? null),
         xp: prof?.xp ?? 0,
         battle_points: prof?.battle_points ?? 0,
+        current_streak: prof?.current_streak ?? 0,
         lessons_passed: passedByUser.get(u.id) ?? 0,
         created_at: u.created_at,
         last_sign_in_at: u.last_sign_in_at,
