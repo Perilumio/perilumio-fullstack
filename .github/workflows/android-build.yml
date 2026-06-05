@@ -1,0 +1,90 @@
+name: Android Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: "Build-Typ (debug oder release)"
+        required: true
+        default: "debug"
+        type: choice
+        options:
+          - debug
+          - release
+  push:
+    branches: [main]
+    paths:
+      - "android/**"
+      - "capacitor.config.ts"
+      - "package.json"
+      - ".github/workflows/android-build.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "21"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Capacitor sync
+        run: npx cap sync android
+
+      - name: Make gradlew executable
+        run: chmod +x android/gradlew
+
+      - name: Build Debug APK
+        if: ${{ github.event.inputs.build_type == 'debug' || github.event_name == 'push' }}
+        run: |
+          cd android
+          ./gradlew assembleDebug
+
+      - name: Build Release Bundle (AAB)
+        if: ${{ github.event.inputs.build_type == 'release' }}
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "Fehler: ANDROID_KEYSTORE_BASE64 fehlt. Erst Keystore-Setup ausfuehren."
+            exit 1
+          fi
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
+          cd android
+          ./gradlew bundleRelease \
+            -Pandroid.injected.signing.store.file=$(pwd)/app/release.keystore \
+            -Pandroid.injected.signing.store.password=$ANDROID_KEYSTORE_PASSWORD \
+            -Pandroid.injected.signing.key.alias=$ANDROID_KEY_ALIAS \
+            -Pandroid.injected.signing.key.password=$ANDROID_KEY_PASSWORD
+
+      - name: Upload Debug APK
+        if: ${{ github.event.inputs.build_type == 'debug' || github.event_name == 'push' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: perilumio-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14
+
+      - name: Upload Release Bundle
+        if: ${{ github.event.inputs.build_type == 'release' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: perilumio-release-aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 30
