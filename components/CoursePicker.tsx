@@ -38,6 +38,25 @@ export function CoursePicker({ activeCourseKey }: { activeCourseKey: CourseKey }
       <ul className="course-list" data-testid="course-list">
         {filtered.map((c) => {
           const isActive = c.key === current;
+          if (c.comingSoon) {
+            return (
+              <li key={c.key}>
+                <div
+                  className="course-row course-row-soon"
+                  data-testid={`course-card-${c.key}`}
+                  data-active="false"
+                  data-coming-soon="true"
+                  aria-disabled="true"
+                >
+                  <div className="course-row-info">
+                    <div className="course-row-title" data-testid={`course-title-${c.key}`}>{c.label}</div>
+                    <div className="course-row-sub muted">{c.description}</div>
+                  </div>
+                  <span className="pill course-row-pill" data-testid={`course-soon-badge-${c.key}`}>Coming Soon</span>
+                </div>
+              </li>
+            );
+          }
           return (
             <li key={c.key}>
               <form

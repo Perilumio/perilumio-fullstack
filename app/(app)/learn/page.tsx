@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { AppShell } from '@/components/AppShell';
 import { LearnPageClient } from '@/components/LearnPageClient';
-import { getActiveCourseKey, courseLabel, isValidCourseKey, type CourseKey } from '@/lib/courses';
+import { getActiveCourseKey, courseLabel, isValidCourseKey, isComingSoonCourse, type CourseKey } from '@/lib/courses';
 import { getCourseLessons } from '@/lib/data';
 import { createClient } from '@/lib/supabase/server';
 
@@ -11,6 +11,7 @@ export default async function LearnPage({ searchParams }: { searchParams?: Promi
   const params = searchParams ? await searchParams : {};
   const override = isValidCourseKey(params?.course) ? (params!.course as CourseKey) : null;
   const courseKey: CourseKey = override ?? (await getActiveCourseKey());
+  const courseComingSoon = isComingSoonCourse(courseKey);
   const { lessons, questions } = await getCourseLessons(courseKey);
 
   const supabase = await createClient();
@@ -60,7 +61,15 @@ export default async function LearnPage({ searchParams }: { searchParams?: Promi
   return (
     <AppShell>
       <section className="stack">
-        {lessons.length === 0 ? (
+        {courseComingSoon ? (
+          <div className="card stack" data-testid="learn-coming-soon-notice">
+            <h2>{courseLabel(courseKey)} ist noch nicht verfuegbar</h2>
+            <p className="muted">
+              Dieser Kurs ist noch nicht verfuegbar — bitte ABU auswaehlen.
+            </p>
+            <Link className="btn btn-primary" href="/courses" data-testid="learn-coming-soon-courses-link">Zur Kursauswahl</Link>
+          </div>
+        ) : lessons.length === 0 ? (
           <>
             <div className="card hero">
               <div>
