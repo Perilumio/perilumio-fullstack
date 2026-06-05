@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Perilumio</string>
+    <string name="title_activity_main">Perilumio</string>
+    <string name="package_name">ch.perilumio.app</string>
+    <string name="custom_url_scheme">ch.perilumio.app</string>
+</resources>

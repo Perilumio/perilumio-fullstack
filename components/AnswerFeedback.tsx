@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { successHaptic, errorHaptic } from '@/lib/haptics';
 
 export type AnswerFeedbackKind = 'correct' | 'wrong';
 
@@ -138,9 +139,11 @@ export function AnswerFeedback({ trigger }: { trigger: Trigger }) {
     if (trigger.kind === 'wrong') {
       playBuzzer();
       vibrate([35, 60, 90]);
+      void errorHaptic();
     } else {
       playSuccess();
       vibrate([20, 40, 25, 40, 60]);
+      void successHaptic();
     }
     if (timerRef.current) window.clearTimeout(timerRef.current);
     timerRef.current = window.setTimeout(() => {
