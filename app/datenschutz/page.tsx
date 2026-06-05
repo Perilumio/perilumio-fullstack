@@ -20,7 +20,7 @@ export default function DatenschutzPage() {
           {/* Strasse */}<br />
           {/* PLZ Ort */}<br />
           Schweiz<br />
-          E-Mail: <a href="mailto:datenschutz@perilumio.ch">datenschutz@perilumio.ch</a>
+          E-Mail: <a href="mailto:perilumio@outlook.com">perilumio@outlook.com</a>
         </p>
 
         <h2>2. Geltungsbereich</h2>
@@ -100,7 +100,7 @@ export default function DatenschutzPage() {
           <li>Beschwerde bei der zustaendigen Aufsichtsbehoerde (in der Schweiz: EDOEB)</li>
         </ul>
         <p>
-          Anfragen richtest du bitte an <a href="mailto:datenschutz@perilumio.ch">datenschutz@perilumio.ch</a>.
+          Anfragen richtest du bitte an <a href="mailto:perilumio@outlook.com">perilumio@outlook.com</a>.
         </p>
 
         <h2>10. Cookies und vergleichbare Technologien</h2>
