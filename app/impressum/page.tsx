@@ -20,8 +20,7 @@ export default function ImpressumPage() {
 
         <h2>Kontakt</h2>
         <p>
-          E-Mail: <a href="mailto:kontakt@perilumio.ch">kontakt@perilumio.ch</a><br />
-          Datenschutz: <a href="mailto:datenschutz@perilumio.ch">datenschutz@perilumio.ch</a>
+          E-Mail: <a href="mailto:perilumio@outlook.com">perilumio@outlook.com</a>
         </p>
 
         <h2>Verantwortlich fuer den Inhalt</h2>
