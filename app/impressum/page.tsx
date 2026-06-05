@@ -29,12 +29,6 @@ export default function ImpressumPage() {
           Roger Bleuler
         </p>
 
-        <h2>Handelsregister</h2>
-        <p className="muted">
-          {/* TODO Roger: falls eingetragen, Registereintrag, UID, MwSt-Nummer ergaenzen. Sonst loeschen. */}
-          Nicht eingetragen.
-        </p>
-
         <h2>Haftungsausschluss</h2>
         <p>
           Trotz sorgfaeltiger inhaltlicher Kontrolle uebernehmen wir keine Haftung fuer die Inhalte
