@@ -5,18 +5,53 @@ export const metadata = { title: 'Impressum - Perilumio' };
 export default function ImpressumPage() {
   return (
     <main className="container">
-      <section className="card stack" style={{ maxWidth: 720, margin: '8vh auto' }}>
-        <span className="pill">● Impressum</span>
+      <section className="card stack" style={{ maxWidth: 760, margin: '6vh auto' }}>
+        <span className="pill">Impressum</span>
         <h1>Impressum</h1>
+
+        <h2>Betreiberin / Betreiber</h2>
         <p className="muted">
-          Diese Seite ist ein Platzhalter. Die rechtsverbindlichen Angaben werden
-          vor der Veroeffentlichung im App-Store noch finalisiert.
+          {/* TODO Roger: vollstaendige Angaben ergaenzen */}
+          Roger Bleuler<br />
+          {/* Strasse und Hausnummer */}<br />
+          {/* PLZ und Ort */}<br />
+          Schweiz
         </p>
+
+        <h2>Kontakt</h2>
+        <p>
+          E-Mail: <a href="mailto:kontakt@perilumio.ch">kontakt@perilumio.ch</a><br />
+          Datenschutz: <a href="mailto:datenschutz@perilumio.ch">datenschutz@perilumio.ch</a>
+        </p>
+
+        <h2>Verantwortlich fuer den Inhalt</h2>
+        <p>
+          Roger Bleuler
+        </p>
+
+        <h2>Handelsregister</h2>
         <p className="muted">
-          TODO: Betreiberin oder Betreiber, Rechtsform, Adresse, Kontaktangaben
-          und allfaellige Registereintraege ergaenzen.
+          {/* TODO Roger: falls eingetragen, Registereintrag, UID, MwSt-Nummer ergaenzen. Sonst loeschen. */}
+          Nicht eingetragen.
         </p>
-        <div className="stack">
+
+        <h2>Haftungsausschluss</h2>
+        <p>
+          Trotz sorgfaeltiger inhaltlicher Kontrolle uebernehmen wir keine Haftung fuer die Inhalte
+          externer Links. Fuer den Inhalt der verlinkten Seiten sind ausschliesslich deren Betreiber verantwortlich.
+        </p>
+        <p>
+          Die Inhalte von Perilumio dienen dem Lernen und der Pruefungsvorbereitung. Wir uebernehmen
+          keine Gewaehr fuer die Richtigkeit, Vollstaendigkeit und Aktualitaet der Fragen und Antworten.
+        </p>
+
+        <h2>Urheberrecht</h2>
+        <p>
+          Alle Inhalte auf Perilumio sind urheberrechtlich geschuetzt. Eine Verwendung ueber den
+          persoenlichen Lernzweck hinaus bedarf der schriftlichen Zustimmung des Betreibers.
+        </p>
+
+        <div className="stack" style={{ marginTop: 16 }}>
           <Link href="/" className="btn">Zurueck zur Startseite</Link>
         </div>
       </section>
