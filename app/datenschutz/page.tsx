@@ -15,10 +15,9 @@ export default function DatenschutzPage() {
           Verantwortlich fuer die Bearbeitung der Personendaten im Rahmen von Perilumio ist:
         </p>
         <p className="muted">
-          {/* TODO Roger: Name, Strasse, PLZ Ort, Land */}
           Roger Bleuler<br />
-          {/* Strasse */}<br />
-          {/* PLZ Ort */}<br />
+          Walkeliweg 6<br />
+          6210 Sursee<br />
           Schweiz<br />
           E-Mail: <a href="mailto:perilumio@outlook.com">perilumio@outlook.com</a>
         </p>

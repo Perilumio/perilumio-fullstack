@@ -11,10 +11,9 @@ export default function ImpressumPage() {
 
         <h2>Betreiberin / Betreiber</h2>
         <p className="muted">
-          {/* TODO Roger: vollstaendige Angaben ergaenzen */}
           Roger Bleuler<br />
-          {/* Strasse und Hausnummer */}<br />
-          {/* PLZ und Ort */}<br />
+          Walkeliweg 6<br />
+          6210 Sursee<br />
           Schweiz
         </p>
 
