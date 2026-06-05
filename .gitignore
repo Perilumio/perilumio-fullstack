@@ -1,3 +1,13 @@
 node_modules/
 .next/
 .env.local
+
+# Capacitor native build artefacts
+ios/App/Pods/
+ios/DerivedData/
+ios/App/build/
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+*.xcuserstate

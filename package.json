@@ -2,7 +2,37 @@
   "name": "perilumio-fullstack-mvp",
   "version": "0.1.0",
   "private": true,
-  "scripts": {"dev": "next dev", "build": "next build", "start": "next start", "lint": "next lint"},
-  "dependencies": {"@supabase/ssr": "latest", "@supabase/supabase-js": "latest", "next": "latest", "papaparse": "latest", "react": "latest", "react-dom": "latest"},
-  "devDependencies": {"@types/node": "latest", "@types/papaparse": "latest", "@types/react": "latest", "@types/react-dom": "latest", "typescript": "latest"}
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "cap:sync": "next build && cap sync",
+    "ios": "cap open ios",
+    "android": "cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.6.6",
+    "@capacitor/browser": "^7.0.5",
+    "@capacitor/core": "^7.6.6",
+    "@capacitor/haptics": "^7.0.5",
+    "@capacitor/ios": "^7.6.6",
+    "@capacitor/push-notifications": "^7.0.6",
+    "@capacitor/splash-screen": "^7.0.5",
+    "@capacitor/status-bar": "^7.0.6",
+    "@supabase/ssr": "latest",
+    "@supabase/supabase-js": "latest",
+    "next": "latest",
+    "papaparse": "latest",
+    "react": "latest",
+    "react-dom": "latest"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.6.6",
+    "@types/node": "latest",
+    "@types/papaparse": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "typescript": "latest"
+  }
 }

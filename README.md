@@ -90,3 +90,32 @@ Diese Version entwickelt den MVP zu einer saubereren Release-Basis weiter.
   `20260539_abu_smartlearn_rebuild_10x10.sql`: 16 Basis-Lektionen × 10
   Sequenzen × 10 Fragen (Titel: `<Topic> · 1/10` … `· 10/10`). Verändert
   ausschliesslich ABU-Inhalte (course_key = `abu`).
+
+
+## Native Apps
+
+Der native Wrapper basiert auf Capacitor. Die App laedt im Remote-Modus die
+Production-URL https://perilumio-fullstack-ftmf.vercel.app im WebView. Die
+Verzeichnisse `ios/` und `android/` sind Source und werden eingecheckt.
+
+### Voraussetzungen
+- Xcode 16 oder neuer
+- Android Studio Hedgehog oder neuer
+- Java 21
+- Node 20 oder neuer
+
+### Workflow
+- `npx cap sync` nach Aenderungen an Konfiguration oder Plugins ausfuehren
+- `npx cap open ios` oeffnet das Projekt in Xcode, dort Bundle-ID und Signing
+  einrichten (Bundle-ID: ch.perilumio.app)
+- `npx cap open android` oeffnet das Projekt in Android Studio, dort Keystore
+  generieren und Signing konfigurieren (Application-ID: ch.perilumio.app)
+
+### Hinweise
+- App-Icons und Splash-Bilder werden separat ueber @capacitor/assets erzeugt und
+  sind nicht Teil dieses Setups
+- Push-Notifications sind vorbereitet (Permission-Request beim Start), der
+  Token-Versand benoetigt spaeter einen APNs-Key (iOS) und einen
+  FCM-Service-Account (Android)
+- Die Seiten /datenschutz und /impressum enthalten Platzhalter und muessen vor
+  der App-Store-Einreichung mit verbindlichen Texten ersetzt werden

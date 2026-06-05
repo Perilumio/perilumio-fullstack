@@ -324,3 +324,6 @@
   .card.hero>[data-avatar-fallback]{width:112px !important}
   .card.hero>[data-avatar-fallback]{height:101px !important}
 }
+.app-footer{display:flex;justify-content:center;align-items:center;gap:10px;padding:24px 16px 32px;color:var(--muted);font-size:13px}
+.app-footer-link{color:var(--muted);transition:color .15s ease}
+.app-footer-link:hover{color:var(--blue2)}
