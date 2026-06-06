@@ -200,10 +200,11 @@
 /* Streak-Feier über dem Quiz-Container: kurz hervorgehobene Streak-Zahl mit
    Flammen-Icon. Das Konfetti selbst rendert canvas-confetti als Overlay. */
 .compact-question{position:relative}
-.cq-streak-celebration{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:5;display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:999px;background:linear-gradient(180deg,rgba(255,150,60,.22),rgba(255,120,40,.12));border:1px solid rgba(255,150,60,.5);box-shadow:0 0 26px rgba(255,150,60,.45);pointer-events:none;animation:streak-celebrate 1.5s ease-out 1}
+.cq-streak-celebration{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:5;display:inline-flex;align-items:center;gap:12px;padding:14px 26px;border-radius:999px;background:linear-gradient(180deg,rgba(255,150,60,.22),rgba(255,120,40,.12));border:1px solid rgba(255,150,60,.5);box-shadow:0 0 26px rgba(255,150,60,.45);pointer-events:none;animation:streak-celebrate 4.5s ease-out 1}
 .cq-streak-celebration-flame{display:inline-flex;color:#ffb066}
-.cq-streak-celebration-value{font-size:24px;font-weight:800;line-height:1;color:#ffd24c}
-@keyframes streak-celebrate{0%{opacity:0;transform:translateX(-50%) scale(.7)}18%{opacity:1;transform:translateX(-50%) scale(1.2)}40%{transform:translateX(-50%) scale(1)}82%{opacity:1}100%{opacity:0;transform:translateX(-50%) scale(1)}}
+.cq-streak-celebration-flame svg{width:32px;height:32px}
+.cq-streak-celebration-value{font-size:44px;font-weight:800;line-height:1;color:#ffd24c;text-shadow:0 0 18px rgba(255,210,76,.6)}
+@keyframes streak-celebrate{0%{opacity:0;transform:translateX(-50%) scale(.7)}8%{opacity:1;transform:translateX(-50%) scale(1.9)}18%{transform:translateX(-50%) scale(1.6)}30%{transform:translateX(-50%) scale(1.7)}45%{transform:translateX(-50%) scale(1.6)}88%{opacity:1;transform:translateX(-50%) scale(1.6)}100%{opacity:0;transform:translateX(-50%) scale(1.6)}}
 @media (prefers-reduced-motion:reduce){.cq-streak-celebration{animation:none}}
 .option:disabled{cursor:default}
 

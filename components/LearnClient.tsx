@@ -295,22 +295,29 @@ export function LearnClient({
     celebrationTimerRef.current = window.setTimeout(() => {
       setStreakCelebration(null);
       celebrationTimerRef.current = null;
-    }, 1500);
+    }, 4500);
     let reduceMotion = false;
     try {
       reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     } catch {}
     if (reduceMotion) return;
-    try {
-      confetti({
-        particleCount: 120,
-        spread: 70,
-        startVelocity: 38,
-        origin: { x: 0.5, y: 0.35 },
-        colors: ['#4c7bff', '#37b8ff', '#ff9838', '#ffd24c'],
-        disableForReducedMotion: true,
-      });
-    } catch {}
+    // Drei Bursts ueber 4.5s verteilt, damit das Konfetti die komplette
+    // hervorgehobene Phase begleitet und nicht schon nach 1.5s verklingt.
+    const burst = (originX: number) => {
+      try {
+        confetti({
+          particleCount: 120,
+          spread: 70,
+          startVelocity: 38,
+          origin: { x: originX, y: 0.35 },
+          colors: ['#4c7bff', '#37b8ff', '#ff9838', '#ffd24c'],
+          disableForReducedMotion: true,
+        });
+      } catch {}
+    };
+    burst(0.5);
+    window.setTimeout(() => burst(0.3), 1500);
+    window.setTimeout(() => burst(0.7), 3000);
   }
 
   function choose(key: string) {
