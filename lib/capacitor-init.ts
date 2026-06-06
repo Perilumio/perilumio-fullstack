@@ -1,7 +1,6 @@
 import { Capacitor } from '@capacitor/core'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { SplashScreen } from '@capacitor/splash-screen'
-import { PushNotifications } from '@capacitor/push-notifications'
 
 let initialized = false
 
@@ -16,9 +15,5 @@ export async function initCapacitor(): Promise<void> {
 
   try {
     await SplashScreen.hide()
-  } catch {}
-
-  try {
-    await PushNotifications.requestPermissions()
   } catch {}
 }
