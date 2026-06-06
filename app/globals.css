@@ -197,8 +197,14 @@
 @keyframes streak-pop{0%{transform:scale(1);box-shadow:0 0 14px rgba(255,120,40,.22)}30%{transform:scale(1.18);box-shadow:0 0 30px rgba(255,150,60,.65)}100%{transform:scale(1);box-shadow:0 0 14px rgba(255,120,40,.22)}}
 @media (prefers-reduced-motion:reduce){.streak-pill-pulse{animation:none}.learn-progress-fill{transition:none}}
 
-/* Antwort-Optionen während serverseitiger Auswertung (zwischen Klick und Reveal) */
-.option-pending{border-color:rgba(55,184,255,.45);background:linear-gradient(180deg,rgba(20,35,65,.96),rgba(14,22,40,.96));box-shadow:0 0 0 1px rgba(55,184,255,.25)}
+/* Streak-Feier über dem Quiz-Container: kurz hervorgehobene Streak-Zahl mit
+   Flammen-Icon. Das Konfetti selbst rendert canvas-confetti als Overlay. */
+.compact-question{position:relative}
+.cq-streak-celebration{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:5;display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:999px;background:linear-gradient(180deg,rgba(255,150,60,.22),rgba(255,120,40,.12));border:1px solid rgba(255,150,60,.5);box-shadow:0 0 26px rgba(255,150,60,.45);pointer-events:none;animation:streak-celebrate 1.5s ease-out 1}
+.cq-streak-celebration-flame{display:inline-flex;color:#ffb066}
+.cq-streak-celebration-value{font-size:24px;font-weight:800;line-height:1;color:#ffd24c}
+@keyframes streak-celebrate{0%{opacity:0;transform:translateX(-50%) scale(.7)}18%{opacity:1;transform:translateX(-50%) scale(1.2)}40%{transform:translateX(-50%) scale(1)}82%{opacity:1}100%{opacity:0;transform:translateX(-50%) scale(1)}}
+@media (prefers-reduced-motion:reduce){.cq-streak-celebration{animation:none}}
 .option:disabled{cursor:default}
 
 /* Level-Badge (Profil) */

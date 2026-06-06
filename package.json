@@ -21,6 +21,8 @@
     "@capacitor/status-bar": "^7.0.6",
     "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
+    "@types/canvas-confetti": "^1.9.0",
+    "canvas-confetti": "^1.9.4",
     "next": "latest",
     "papaparse": "latest",
     "react": "latest",

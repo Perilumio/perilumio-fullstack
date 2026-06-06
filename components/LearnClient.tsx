@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import confetti from 'canvas-confetti';
 import { AnswerFeedback, type AnswerFeedbackKind } from '@/components/AnswerFeedback';
 import { RankUpModal } from '@/components/RankUpModal';
 import { SequenceResultModal } from '@/components/SequenceResultModal';
@@ -13,10 +14,10 @@ type Lesson = {
   sublesson_index?: number | null;
   sublesson_total?: number | null;
 };
-// Anti-Cheat: correct_option und explanation werden NICHT mehr vom Server in
-// das initial gerenderte Question-Objekt aufgenommen. Die richtige Antwort
-// kommt erst nach dem POST /api/lesson-answer zurück. Das verhindert, dass
-// jemand im DevTools/Network-Tab die Lösungen vorab auslesen kann.
+// correct_option und explanation liegen ohnehin schon im Browser (lib/data.ts
+// lädt die Fragen mit select('*')). Wir nutzen sie deshalb direkt für ein
+// optimistisches UI: die Auswertung passiert sofort clientseitig, der POST an
+// /api/lesson-answer läuft nur noch im Hintergrund (XP, Streak, Persistenz).
 type Question = {
   id: string;
   lesson_id: string;
@@ -25,6 +26,8 @@ type Question = {
   option_b: string;
   option_c: string;
   option_d: string;
+  correct_option: 'A' | 'B' | 'C' | 'D';
+  explanation?: string | null;
 };
 type Progress = {
   lesson_id: string;
@@ -186,6 +189,13 @@ export function LearnClient({
   );
   const [resumedFrom, setResumedFrom] = useState<number | null>(null);
   const [feedbackFx, setFeedbackFx] = useState<{ id: number; kind: AnswerFeedbackKind } | null>(null);
+  // Hintergrund-Speichern fehlgeschlagen: kurzer Hinweis, ohne die schon
+  // gezeigte Antwort zurückzunehmen (das würde den User nur verwirren).
+  const [saveError, setSaveError] = useState(false);
+  // Feier-Animation, wenn eine richtige Antwort den Tages-Streak erweitert hat.
+  // streakValue füllt die hervorgehobene Zahl, celebrate steuert Konfetti + Puls.
+  const [streakCelebration, setStreakCelebration] = useState<{ value: number } | null>(null);
+  const celebrationTimerRef = useRef<number | null>(null);
   const [rankUp, setRankUp] = useState<{ oldRank: number; newRank: number; bonusXp: number } | null>(null);
   // Sequence-end result modal: shown after the last question is answered and
   // before any rank-up celebration. Holds the data needed to render the modal
@@ -231,12 +241,19 @@ export function LearnClient({
     setXpFeedback(null);
     setResumedFrom(resumeIndex > 0 ? resumeIndex : null);
     setPendingRankUp(null);
+    setSaveError(false);
     // Clear leftover answer-feedback fx so the buzzer/success cue from the
     // previous lesson's last answer doesn't replay when the question view
     // remounts for the new lesson.
     setFeedbackFx(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lesson?.id]);
+
+  useEffect(() => {
+    return () => {
+      if (celebrationTimerRef.current) window.clearTimeout(celebrationTimerRef.current);
+    };
+  }, []);
 
   const question = lessonQuestions[questionIndex];
   const options = question
@@ -257,6 +274,7 @@ export function LearnClient({
     setResumedFrom(null);
     setPendingRankUp(null);
     setFeedbackFx(null);
+    setSaveError(false);
   }
 
   async function saveProgress(lessonId: string, lastQuestionIndex: number) {
@@ -269,57 +287,99 @@ export function LearnClient({
     } catch {}
   }
 
-  async function choose(key: string) {
-    if (selected || !question) return;
-    setSelected(key);
-    // Optimistisches Feedback gibt es erst, wenn der Server geantwortet hat —
-    // sonst könnte der Client falsches Feedback zeigen, wenn der Server eine
-    // andere correct_option kennt. Wir warten kurz.
+  // Konfetti-Explosion über dem Quiz-Container plus kurzer Streak-Puls. Respektiert
+  // prefers-reduced-motion: dann nur die hervorgehobene Zahl, keine Partikel.
+  function celebrateStreak(streakValue: number) {
+    setStreakCelebration({ value: streakValue });
+    if (celebrationTimerRef.current) window.clearTimeout(celebrationTimerRef.current);
+    celebrationTimerRef.current = window.setTimeout(() => {
+      setStreakCelebration(null);
+      celebrationTimerRef.current = null;
+    }, 1500);
+    let reduceMotion = false;
     try {
-      const response = await fetch('/api/lesson-answer', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questionId: question.id, selectedOption: key }),
+      reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch {}
+    if (reduceMotion) return;
+    try {
+      confetti({
+        particleCount: 120,
+        spread: 70,
+        startVelocity: 38,
+        origin: { x: 0.5, y: 0.35 },
+        colors: ['#4c7bff', '#37b8ff', '#ff9838', '#ffd24c'],
+        disableForReducedMotion: true,
       });
-      const result = await response.json();
-      const isCorrect = Boolean(result.correct);
-      if (isCorrect) setCorrectCount((v) => v + 1);
-      setFeedbackFx({ id: Date.now(), kind: isCorrect ? 'correct' : 'wrong' });
-      setRevealed({
-        correctOption: result.correctOption,
-        explanation: result.explanation ?? '',
-        correct: isCorrect,
-      });
-      setXpFeedback({
-        awarded: result.awarded ?? 0,
-        alreadyAwarded: Boolean(result.alreadyAwarded),
-      });
-      // Streak-Update an Parent weitergeben, damit der Streak-Pill oben in der
-      // Übersicht live mitläuft.
-      if (result.streak && onStreakUpdate) {
-        onStreakUpdate({
-          current: Number(result.streak.current) || 0,
-          longest: Number(result.streak.longest) || 0,
-          increased: Boolean(result.streak.increased),
+    } catch {}
+  }
+
+  function choose(key: string) {
+    if (selected || !question) return;
+    // Auswertung passiert sofort clientseitig aus den bereits vorhandenen Props.
+    const isCorrect = key === question.correct_option;
+    setSelected(key);
+    setSaveError(false);
+    if (isCorrect) setCorrectCount((v) => v + 1);
+    setFeedbackFx({ id: Date.now(), kind: isCorrect ? 'correct' : 'wrong' });
+    setRevealed({
+      correctOption: question.correct_option,
+      explanation: question.explanation ?? '',
+      correct: isCorrect,
+    });
+    // XP-Wert kennen wir erst nach der Server-Antwort; bis dahin neutral.
+    setXpFeedback(null);
+
+    const questionId = question.id;
+    // Server-POST läuft im Hintergrund weiter (XP, Streak, Persistenz). Die UI
+    // wartet nicht darauf und bleibt im bereits korrekten Zustand.
+    void (async () => {
+      try {
+        const response = await fetch('/api/lesson-answer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ questionId, selectedOption: key }),
         });
-      }
-      // Aggregate the climb across the sequence: oldest oldRank seen vs the
-      // most recent newRank, so a sequence that moves 12 → 9 → 7 reports
-      // "12 → 7" once at the end rather than firing three separate modals.
-      if (
-        typeof result.oldRank === 'number' &&
-        typeof result.newRank === 'number' &&
-        result.newRank < result.oldRank
-      ) {
-        setPendingRankUp((prev) => {
-          const oldRank = prev ? Math.max(prev.oldRank, result.oldRank) : result.oldRank;
-          const newRank = prev ? Math.min(prev.newRank, result.newRank) : result.newRank;
-          return { oldRank, newRank };
+        if (!response.ok) throw new Error('save failed');
+        const result = await response.json();
+        setXpFeedback({
+          awarded: result.awarded ?? 0,
+          alreadyAwarded: Boolean(result.alreadyAwarded),
         });
+        // Streak-Update an Parent weitergeben, damit der Streak-Pill oben in der
+        // Übersicht live mitläuft.
+        const streakIncreased = Boolean(result.streak?.increased);
+        if (result.streak && onStreakUpdate) {
+          onStreakUpdate({
+            current: Number(result.streak.current) || 0,
+            longest: Number(result.streak.longest) || 0,
+            increased: streakIncreased,
+          });
+        }
+        // Feier nur bei richtiger Antwort UND echtem Streak-Anstieg.
+        if (isCorrect && streakIncreased) {
+          celebrateStreak(Number(result.streak.current) || 0);
+        }
+        // Aggregate the climb across the sequence: oldest oldRank seen vs the
+        // most recent newRank, so a sequence that moves 12 → 9 → 7 reports
+        // "12 → 7" once at the end rather than firing three separate modals.
+        if (
+          typeof result.oldRank === 'number' &&
+          typeof result.newRank === 'number' &&
+          result.newRank < result.oldRank
+        ) {
+          setPendingRankUp((prev) => {
+            const oldRank = prev ? Math.max(prev.oldRank, result.oldRank) : result.oldRank;
+            const newRank = prev ? Math.min(prev.newRank, result.newRank) : result.newRank;
+            return { oldRank, newRank };
+          });
+        }
+      } catch {
+        // Antwort bleibt sichtbar, nur das Speichern hat nicht geklappt.
+        setSaveError(true);
+        setXpFeedback({ awarded: 0, alreadyAwarded: false });
       }
-    } catch {
-      setXpFeedback({ awarded: 0, alreadyAwarded: false });
-    }
+    })();
+
     if (lesson) {
       void saveProgress(lesson.id, questionIndex + 1);
     }
@@ -333,6 +393,7 @@ export function LearnClient({
       setRevealed(null);
       setXpFeedback(null);
       setResumedFrom(null);
+      setSaveError(false);
       if (lesson) void saveProgress(lesson.id, nextIndex);
       return;
     }
@@ -621,6 +682,24 @@ export function LearnClient({
     <>
     <div className="card compact-question" data-testid="learn-question-view">
       <AnswerFeedback trigger={feedbackFx} />
+      {streakCelebration ? (
+        <div
+          className="cq-streak-celebration"
+          data-testid="learn-streak-celebration"
+          aria-hidden="true"
+          role="presentation"
+        >
+          <span className="cq-streak-celebration-flame">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path
+                d="M12 2.5c1.6 2.7 1.2 4.6-.3 6.1-1.3 1.3-2.7 2.6-2.7 4.7a3 3 0 1 0 5.7 1.3c.8.9 1.3 2 1.3 3.2A6 6 0 1 1 7.5 13c0-3.1 2-5 3.2-6.6 1-1.4 1.5-2.7 1.3-3.9Z"
+                fill="currentColor"
+              />
+            </svg>
+          </span>
+          <span className="cq-streak-celebration-value">{streakCelebration.value}</span>
+        </div>
+      ) : null}
       {question ? (
         <>
           <div className="cq-header">
@@ -655,18 +734,16 @@ export function LearnClient({
           <h2 className="cq-prompt">{question.prompt}</h2>
           <div className="cq-options">
             {options.map((option) => {
-              // Server-revealed correct/wrong styling: erst nach POST gibt es
-              // eine sichtbare Markierung, vorher ist alles neutral. Dadurch
-              // verrät das DOM die richtige Antwort nicht vorab.
+              // Markierung wird sofort beim Klick clientseitig gesetzt: die
+              // richtige Option grün, die falsche Auswahl rot. Kein Warten auf
+              // den Server-POST mehr.
               const cls = revealed
                 ? option.key === revealed.correctOption
                   ? 'option correct'
                   : option.key === selected
                     ? 'option wrong'
                     : 'option'
-                : selected === option.key
-                  ? 'option option-pending'
-                  : 'option';
+                : 'option';
               return (
                 <button
                   key={option.key}
@@ -687,16 +764,17 @@ export function LearnClient({
               </strong>
               {revealed.explanation ? <> — {revealed.explanation}</> : null}
             </div>
-          ) : selected ? (
-            <div className="cq-feedback muted" data-testid="learn-question-feedback-pending">
-              <em>Auswertung…</em>
+          ) : null}
+          {saveError ? (
+            <div className="cq-feedback muted" data-testid="learn-save-error">
+              Konnte nicht gespeichert werden, bitte spaeter erneut versuchen.
             </div>
           ) : null}
           <div className="cq-actions">
             <button
               className="btn btn-primary"
               onClick={next}
-              disabled={!selected || !revealed}
+              disabled={!selected}
             >
               {questionIndex < lessonQuestions.length - 1 ? 'Nächste' : 'Abschliessen'}
             </button>
