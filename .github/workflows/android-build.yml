@@ -88,3 +88,15 @@ jobs:
           name: perilumio-release-aab
           path: android/app/build/outputs/bundle/release/app-release.aab
           retention-days: 30
+
+      - name: Publish Release Bundle as GitHub Release
+        if: ${{ github.event.inputs.build_type == 'release' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="android-release-${{ github.run_number }}"
+          gh release create "$TAG" \
+            android/app/build/outputs/bundle/release/app-release.aab \
+            --repo ${{ github.repository }} \
+            --title "Android Release Build #${{ github.run_number }}" \
+            --notes "Signierter Release-AAB fuer Google Play. Direkt herunterladbar unten."
