@@ -1,6 +1,6 @@
 # Perilumio Release-Version
 
-Diese Version entwickelt den MVP zu einer saubereren Release-Basis weiter.
+Diese Version ist die aktuelle Release-Basis von Perilumio.
 
 ## Enthalten
 - Login mit Supabase Auth

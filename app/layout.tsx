@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import type { Metadata, Viewport } from 'next';
 import { CapacitorInit } from '@/components/CapacitorInit';
 export const metadata: Metadata = {
-  title: 'Perilumio MVP',
+  title: 'Perilumio',
   description: 'Lernplattform für Schweizer Berufslehrlinge',
   manifest: '/manifest.json',
   appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'Perilumio' },
