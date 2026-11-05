@@ -5,10 +5,10 @@ type Course = { key: CourseKey; label: string; description: string; comingSoon: 
 // Definierte Kurse in beliebiger Reihenfolge. Die exportierte COURSES-Liste
 // sortiert ABU immer an erste Stelle und alle weiteren Kurse alphabetisch
 // nach Label, damit künftige Kurse automatisch korrekt einsortiert werden.
-// comingSoon: nur ABU ist aktuell aktivierbar, alle anderen Kurse sind als
+// comingSoon: ABU und Strassenbau sind aktivierbar, alle anderen Kurse sind als
 // "Coming Soon" markiert und koennen nicht als aktiver Kurs gesetzt werden.
 const COURSE_DEFINITIONS: ReadonlyArray<Course> = [
-  { key: 'strassenbau',    label: 'Strassenbau',    description: 'Berufsspezifischer Kurs · Arbeitssicherheit',          comingSoon: true },
+  { key: 'strassenbau',    label: 'Strassenbau',    description: 'Strassenbauer/in EFZ · Bildungsplan Verkehrswegbau',   comingSoon: false },
   { key: 'abu',            label: 'ABU',            description: 'Allgemeinbildung · QV-naher Kurs',                     comingSoon: false },
   { key: 'automechaniker', label: 'Automechaniker', description: 'Berufsspezifischer Kurs · Bildungsplan EFZ',           comingSoon: true },
   { key: 'schreiner',      label: 'Schreiner',      description: 'Berufsspezifischer Kurs · Bildungsplan EFZ',           comingSoon: true },
